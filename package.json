@@ -1,0 +1,16 @@
+{
+  "name": "pakrt",
+  "version": "1.0.0",
+  "description": "Bot yang membantu urusan pak RT. Menggunakan Telegram dan Google Sheet",
+  "main": "index.js",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
