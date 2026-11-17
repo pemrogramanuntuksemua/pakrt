@@ -1,62 +1,87 @@
-const pakrt = require("../kode");
-const { setSpreadsheet, createMockSheet } = require("./helpers/mockSheet");
+const { pakrt, buatSheet, dasar, admin, teksTerakhir, baca } = require("./helpers/fixtures");
+const { setSpreadsheet } = require("./helpers/mockSheet");
 
-function lastPayloadText() {
-  const calls = global.UrlFetchApp.fetch.mock.calls;
-  return JSON.parse(calls[calls.length - 1][1].payload).text;
+function kas(rows) {
+  return buatSheet("Kas", rows);
 }
 
 describe("handleTambahKas", () => {
-  let fetchMock;
   beforeEach(() => {
-    fetchMock = jest.fn(() => ({ getContentText: () => "" }));
-    global.UrlFetchApp = { fetch: fetchMock };
+    global.UrlFetchApp = { fetch: jest.fn(() => ({ getContentText: () => "" })) };
     pakrt.setAdminIds([]);
   });
 
   test("non-admin -> akses ditolak", () => {
-    pakrt.handleTambahKas(1, "/tambahkas masuk#50000#Iuran", "X", 999);
-    expect(lastPayloadText()).toContain("Akses Ditolak");
+    pakrt.handleTambahKas(1, "/tambahkas masuk#kasrt#50000#Iuran", "X", 999);
+    expect(teksTerakhir()).toContain("Akses Ditolak");
   });
 
-  test("format salah (tanpa #) -> format error", () => {
-    pakrt.setAdminIds([1]);
-    pakrt.handleTambahKas(1, "/tambahkas", "X", 1);
-    expect(lastPayloadText()).toContain("Format salah");
+  test("format lama (tanpa alokasi) -> pesan perubahan format", () => {
+    admin();
+    setSpreadsheet(dasar());
+    pakrt.handleTambahKas(1, "/tambahkas masuk#50000#Iuran", "X", 1);
+    const text = teksTerakhir();
+    expect(text).toContain("Format /tambahkas berubah");
+    expect(text).toContain("jenis#alokasi#nominal#keterangan");
   });
 
-  test("jenis/nominal invalid -> format error", () => {
-    pakrt.setAdminIds([1]);
-    pakrt.handleTambahKas(1, "/tambahkas foo#abc#ket", "X", 1);
-    expect(lastPayloadText()).toContain("Format salah");
+  test("format benar tapi jenis invalid -> format salah", () => {
+    admin();
+    setSpreadsheet(dasar());
+    pakrt.handleTambahKas(1, "/tambahkas foo#kasrt#1000#x", "X", 1);
+    expect(teksTerakhir()).toContain("Format Salah");
   });
 
-  test("valid masuk -> appendRow dan sukses", () => {
-    pakrt.setAdminIds([1]);
-    const sheet = createMockSheet([["tanggal", "ket", "jenis", "nominal"]]);
-    setSpreadsheet({ Kas: sheet });
-    pakrt.handleTambahKas(1, "/tambahkas masuk#50000#Iuran Budi", "X", 1);
-    expect(sheet._appended.length).toBe(1);
-    const row = sheet._appended[0];
-    expect(row[1]).toBe("Iuran Budi");
-    expect(row[2]).toBe("Masuk");
-    expect(row[3]).toBe(50000);
-    expect(lastPayloadText()).toContain("Kas Berhasil Dicatat");
+  test("kantong tidak dikenal -> error", () => {
+    admin();
+    setSpreadsheet(dasar());
+    pakrt.handleTambahKas(1, "/tambahkas masuk#ngawur#1000#x", "X", 1);
+    expect(teksTerakhir()).toContain("tidak dikenal");
   });
 
-  test("valid keluar tanpa keterangan -> 'Tanpa Keterangan'", () => {
-    pakrt.setAdminIds([1]);
-    const sheet = createMockSheet([["tanggal", "ket", "jenis", "nominal"]]);
-    setSpreadsheet({ Kas: sheet });
-    pakrt.handleTambahKas(1, "/tambahkas keluar#20000", "X", 1);
-    expect(sheet._appended[0][1]).toBe("Tanpa Keterangan");
-    expect(sheet._appended[0][2]).toBe("Keluar");
+  test("masuk valid -> satu baris Kas dengan alokasi", () => {
+    admin();
+    const sheet = kas([]);
+    setSpreadsheet(dasar({ Kas: sheet }));
+    pakrt.handleTambahKas(1, "/tambahkas masuk#kasrt#50000#Iuran Budi", "Bendahara", 1);
+    const rows = baca("Kas");
+    expect(rows.length).toBe(1);
+    expect(rows[0].jenis).toBe("masuk");
+    expect(rows[0].alokasi).toBe("kasrt");
+    expect(rows[0].nominal).toBe(50000);
+    expect(rows[0].keterangan).toBe("Iuran Budi");
+    expect(teksTerakhir()).toContain("Kas Berhasil Dicatat");
+  });
+
+  test("keluar melebihi saldo kantong -> ditolak", () => {
+    admin();
+    setSpreadsheet(dasar({ Kas: kas([]) }));
+    pakrt.handleTambahKas(1, "/tambahkas keluar#kasrt#10000#ATK", "X", 1);
+    expect(teksTerakhir()).toContain("tidak cukup");
+    expect(baca("Kas").length).toBe(0);
+  });
+
+  test("keluar dalam saldo -> tercatat", () => {
+    admin();
+    setSpreadsheet(
+      dasar({
+        Kas: kas([
+          { tanggal: new Date(2026, 0, 2), keterangan: "Iuran", jenis: "masuk", nominal: 50000, alokasi: "kamsih" },
+        ]),
+      })
+    );
+    pakrt.handleTambahKas(1, "/tambahkas keluar#kamsih#40000#Honor satpam", "X", 1);
+    const rows = baca("Kas");
+    expect(rows.length).toBe(2);
+    expect(rows[1].alokasi).toBe("kamsih");
+    expect(rows[1].jenis).toBe("keluar");
+    expect(teksTerakhir()).toContain("Saldo kantong");
   });
 
   test("tab Kas tidak ada -> peringatan", () => {
-    pakrt.setAdminIds([1]);
-    setSpreadsheet({});
-    pakrt.handleTambahKas(1, "/tambahkas masuk#10000#Iuran", "X", 1);
-    expect(lastPayloadText()).toContain("Tab 'Kas' belum dibuat");
+    admin();
+    setSpreadsheet(dasar({ Kas: null }));
+    pakrt.handleTambahKas(1, "/tambahkas masuk#kasrt#10000#Iuran", "X", 1);
+    expect(teksTerakhir()).toContain("belum dibuat");
   });
 });

@@ -1,71 +1,83 @@
-const pakrt = require("../kode");
-const { setSpreadsheet, createMockSheet } = require("./helpers/mockSheet");
+const { pakrt, buatSheet, dasar, teksTerakhir } = require("./helpers/fixtures");
+const { setSpreadsheet } = require("./helpers/mockSheet");
 
-function lastPayloadText() {
-  const calls = global.UrlFetchApp.fetch.mock.calls;
-  const last = calls[calls.length - 1];
-  return JSON.parse(last[1].payload).text;
+function kas(rows) {
+  return buatSheet("Kas", rows);
 }
 
 describe("handleKas", () => {
-  let fetchMock;
-
   beforeEach(() => {
-    fetchMock = jest.fn(() => ({ getContentText: () => "" }));
-    global.UrlFetchApp = { fetch: fetchMock };
+    global.UrlFetchApp = { fetch: jest.fn(() => ({ getContentText: () => "" })) };
   });
 
   test("tab Kas belum ada -> pesan peringatan", () => {
     setSpreadsheet({});
     pakrt.handleKas(1, "/kas", "X", 1);
-    expect(lastPayloadText()).toContain("Tab 'Kas' belum dibuat");
+    expect(teksTerakhir()).toContain("Tab 'Kas' belum dibuat");
   });
 
-  test("hanya header -> belum ada transaksi", () => {
-    const sheet = createMockSheet([["tanggal", "ket", "jenis", "nominal"]]);
-    setSpreadsheet({ Kas: sheet });
+  test("header saja -> saldo nol per kantong", () => {
+    setSpreadsheet(dasar({ Kas: kas([]) }));
     pakrt.handleKas(1, "/kas", "X", 1);
-    expect(lastPayloadText()).toContain("Belum ada catatan transaksi kas");
+    const text = teksTerakhir();
+    expect(text).toContain("kasrt");
+    expect(text).toContain("dkmt");
+    expect(text).toContain("kamsih");
+    expect(text).toContain("TOTAL");
+    expect(text).toContain("Rp 0");
   });
 
-  test("menghitung total masuk/keluar dan saldo", () => {
-    const rows = [
-      ["tanggal", "ket", "jenis", "nominal"],
-      [new Date("2024-01-01"), "Iuran", "Masuk", 50000],
-      [new Date("2024-01-02"), "Beli", "Keluar", 20000],
-    ];
-    const sheet = createMockSheet(rows);
-    setSpreadsheet({ Kas: sheet });
+  test("menghitung saldo per kantong dan total", () => {
+    setSpreadsheet(
+      dasar({
+        Kas: kas([
+          { tanggal: new Date(2026, 0, 5), keterangan: "Iuran", jenis: "masuk", nominal: 50000, alokasi: "kasrt" },
+          { tanggal: new Date(2026, 0, 6), keterangan: "Iuran", jenis: "masuk", nominal: 5000, alokasi: "dkmt" },
+          { tanggal: new Date(2026, 0, 7), keterangan: "Honor", jenis: "keluar", nominal: 20000, alokasi: "kasrt" },
+        ]),
+      })
+    );
     pakrt.handleKas(1, "/kas", "X", 1);
-    const text = lastPayloadText();
+    const text = teksTerakhir();
+    expect(text).toContain("Rp 35.000");
+  });
+
+  test("/kas <kode> menampilkan mutasi kantong", () => {
+    setSpreadsheet(
+      dasar({
+        Kas: kas([
+          { tanggal: new Date(2026, 0, 5), keterangan: "Iuran Budi", jenis: "masuk", nominal: 50000, alokasi: "kasrt" },
+          { tanggal: new Date(2026, 0, 6), keterangan: "Beli ATK", jenis: "keluar", nominal: 5000, alokasi: "kasrt" },
+        ]),
+      })
+    );
+    pakrt.handleKas(1, "/kas kasrt", "X", 1);
+    const text = teksTerakhir();
+    expect(text).toContain("Kas RT");
+    expect(text).toContain("Iuran Budi");
+    expect(text).toContain("Beli ATK");
+    expect(text).toContain("Rp 45.000");
+  });
+
+  test("/kas <kode> tidak dikenal -> error", () => {
+    setSpreadsheet(dasar({ Kas: kas([]) }));
+    pakrt.handleKas(1, "/kas ngawur", "X", 1);
+    expect(teksTerakhir()).toContain("tidak dikenal");
+  });
+
+  test("/kas YYYY-MM menampilkan saldo akhir periode", () => {
+    setSpreadsheet(
+      dasar({
+        Kas: kas([
+          { tanggal: new Date(2026, 0, 5), keterangan: "Masuk Jan", jenis: "masuk", nominal: 50000, alokasi: "kasrt" },
+          { tanggal: new Date(2026, 1, 5), keterangan: "Masuk Feb", jenis: "masuk", nominal: 60000, alokasi: "kasrt" },
+        ]),
+      })
+    );
+    pakrt.handleKas(1, "/kas 2026-01", "X", 1);
+    const text = teksTerakhir();
+    expect(text).toContain("Januari 2026");
     expect(text).toContain("Rp 50.000");
-    expect(text).toContain("Rp 20.000");
-    expect(text).toContain("Rp 30.000");
-  });
-
-  test("menampilkan 3 transaksi terakhir", () => {
-    const rows = [["tanggal", "ket", "jenis", "nominal"]];
-    for (let i = 1; i <= 5; i++) {
-      rows.push([new Date(`2024-01-0${i}`), `Ket${i}`, i % 2 === 0 ? "Keluar" : "Masuk", i * 1000]);
-    }
-    const sheet = createMockSheet(rows);
-    setSpreadsheet({ Kas: sheet });
-    pakrt.handleKas(1, "/kas", "X", 1);
-    const text = lastPayloadText();
-    expect(text).toContain("Ket3");
-    expect(text).toContain("Ket4");
-    expect(text).toContain("Ket5");
-    expect(text).not.toContain("Ket1\n");
-  });
-
-  test("nominal tidak valid dihitung 0", () => {
-    const rows = [
-      ["tanggal", "ket", "jenis", "nominal"],
-      [new Date("2024-01-01"), "X", "Masuk", "abc"],
-    ];
-    const sheet = createMockSheet(rows);
-    setSpreadsheet({ Kas: sheet });
-    pakrt.handleKas(1, "/kas", "X", 1);
-    expect(lastPayloadText()).toContain("Rp 0");
+    expect(text).not.toContain("Rp 110.000");
   });
 });

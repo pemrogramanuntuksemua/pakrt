@@ -1,5 +1,6 @@
 const pakrt = require("../kode");
-const { setSpreadsheet, createMockSheet } = require("./helpers/mockSheet");
+const { setSpreadsheet } = require("./helpers/mockSheet");
+const { buatSheet } = require("./helpers/fixtures");
 
 function payloadTexts() {
   return global.UrlFetchApp.fetch.mock.calls.map((c) => {
@@ -31,10 +32,15 @@ describe("processItem", () => {
   });
 
   test("mendispatch /warga", () => {
-    const sheet = createMockSheet([["h"], ["a"], ["b"]]);
-    setSpreadsheet({ Warga: sheet });
+    setSpreadsheet({
+      Keluarga: buatSheet("Keluarga", [
+        { id_kk: "KK-001", no_rumah: "A1", nama_kk: "Budi", status: "Aktif" },
+        { id_kk: "KK-002", no_rumah: "A2", nama_kk: "Siti", status: "Aktif" },
+      ]),
+      Anggota: buatSheet("Anggota", []),
+    });
     pakrt.processItem(1, "/warga", "Bre", 1);
-    expect(payloadTexts()[0]).toContain("2 Kepala Keluarga");
+    expect(payloadTexts()[0]).toContain("KK aktif: *2*");
   });
 
   test("case-insensitive pada prefix", () => {
