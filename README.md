@@ -64,5 +64,18 @@ Test berada di folder `tests/` dan menggunakan Jest dengan mock global Google Ap
    - Atau panggil URL: `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<WEBHOOK_URL>&drop_pending_updates=true`
    - Alternatif: `deleteWebhook(true)` lalu `setWebhook()`.
 4. Pastikan pakai URL Web App `/exec` (bukan `/dev`) dan `doPost` mengembalikan 200 OK.
+5. Debug ACK-only: set Script Property `ACK_ONLY=true`, kirim pesan, cek pending turun. Jika turun, masalah ada di proses (Sheet/Token). Set `ACK_ONLY=false` untuk normal.
+6. Health check: buka URL Web App `/exec` di browser → harus tampil `OK`.
+7. Deploy ulang setiap perubahan kode (New deployment), lalu `setWebhook(true)` dengan URL `/exec`.
+
+## Polling (alternatif webhook)
+
+Jika webhook bermasalah karena redirect, gunakan polling:
+
+1. Jalankan `setupPollingTrigger()` di Apps Script (membuat trigger tiap 1 menit dan menonaktifkan webhook).
+2. Cek trigger di Apps Script → Triggers.
+3. Untuk menghentikan: jalankan `stopPollingTrigger()`.
+
+Catatan: latensi hingga 1 menit; `pollTelegram()` dapat dijalankan manual untuk uji.
 EOF
 echo done

@@ -10,6 +10,25 @@ global.ContentService = {
 };
 global.Logger = { log: () => {} };
 
+global.LockService = {
+  getScriptLock: () => ({
+    tryLock: () => true,
+    releaseLock: () => {},
+  }),
+};
+
+global.ScriptApp = {
+  getProjectTriggers: () => [],
+  newTrigger: () => ({
+    timeBased: () => ({
+      everyMinutes: () => ({
+        create: () => ({}),
+      }),
+    }),
+  }),
+  deleteTrigger: () => {},
+};
+
 const __propsStore = {};
 global.PropertiesService = {
   getScriptProperties: () => ({

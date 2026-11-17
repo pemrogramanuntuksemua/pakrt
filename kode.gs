@@ -5,6 +5,13 @@ const SPREADSHEET_ID = "";
 const TELEGRAM_TOKEN = "";
 const WEBHOOK_URL = ""; // Diisi setelah di-deploy
 
+// Daftar ID Telegram pengurus inti (Admin) yang diizinkan input kas & pengumuman
+// Cara cek ID Telegram bisa via bot @userinfobot
+const ADMIN_IDS = [];
+
+// ID Group Telegram warga RT untuk auto-broadcast pengumuman (opsional, jika tidak dipakai biarkan kosong "")
+let GROUP_CHAT_ID = "";
+
 const CMD_START = "/start";
 const CMD_KAS = "/kas";
 const CMD_TAMBAHKAS = "/tambahkas";
@@ -22,13 +29,6 @@ const PREFIX_HANDLERS = {
   [CMD_PENGUMUMAN]: handlePengumuman,
   [CMD_BUATPENGUMUMAN]: handleBuatPengumuman,
 };
-
-// Daftar ID Telegram pengurus inti (Admin) yang diizinkan input kas & pengumuman
-// Cara cek ID Telegram bisa via bot @userinfobot
-const ADMIN_IDS = [];
-
-// ID Group Telegram warga RT untuk auto-broadcast pengumuman (opsional, jika tidak dipakai biarkan kosong "")
-let GROUP_CHAT_ID = "";
 
 function isAdmin(userId) {
     return ADMIN_IDS.includes(String(userId));
@@ -65,6 +65,14 @@ function saveProcessedUpdateIds(ids) {
         PropertiesService.getScriptProperties().setProperty("PROCESSED_UPDATE_IDS", JSON.stringify(ids));
     } catch (e) {
         // ignore
+    }
+}
+
+function isAckOnly() {
+    try {
+        return PropertiesService.getScriptProperties().getProperty("ACK_ONLY") === "true";
+    } catch (e) {
+        return false;
     }
 }
 
@@ -151,9 +159,21 @@ function setWebhook(dropPending) {
 }
 
 // 2. Fungsi utama yang menerima pesan masuk dari Telegram (Metode POST)
+function doGet(e) {
+    // Health check sederhana untuk uji URL webhook via browser
+    return ContentService.createTextOutput("OK");
+}
+
 function doPost(e) {
+    Logger.log("doPost invoked");
     const startTime = new Date().getTime();
     try {
+        // Mode debug: hanya ACK 200 tanpa memproses (untuk uji webhook/pending)
+        if (isAckOnly()) {
+            Logger.log("ACK_ONLY mode: returning 200 ms=" + (new Date().getTime() - startTime));
+            return ContentService.createTextOutput("OK");
+        }
+
         const data = JSON.parse(e.postData.contents);
 
         const updateId = data && data.update_id;
@@ -427,6 +447,8 @@ function sendTelegramMessage(chatId, text) {
 
     try {
         const res = UrlFetchApp.fetch(url, options);
+        // delete pending
+        setWebhook(true);
         Logger.log(res.getContentText());
     } catch (error) {
         Logger.log("Error: " + error.toString());
@@ -434,6 +456,86 @@ function sendTelegramMessage(chatId, text) {
         return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
             .setMimeType(ContentService.MimeType.JSON);
     }
+}
+
+// ==========================================
+// POLLING (alternatif webhook)
+// ==========================================
+function pollTelegram() {
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(10000)) {
+        Logger.log("pollTelegram: could not acquire lock");
+        return;
+    }
+    try {
+        const props = PropertiesService.getScriptProperties();
+        const lastId = Number(props.getProperty("LAST_UPDATE_ID") || 0);
+        const offset = lastId > 0 ? lastId + 1 : 0;
+
+        const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getUpdates?offset=${offset}&timeout=5`;
+        const res = UrlFetchApp.fetch(url);
+        const data = JSON.parse(res.getContentText());
+
+        if (!data || !data.ok) {
+            Logger.log("pollTelegram getUpdates error: " + res.getContentText());
+            return;
+        }
+
+        const updates = data.result || [];
+        let maxId = lastId;
+
+        updates.forEach((u) => {
+            if (u.update_id > maxId) maxId = u.update_id;
+
+            if (u.message && u.message.text) {
+                const chatId = u.message.chat.id;
+                const userId = u.message.from.id;
+                const text = String(u.message.text).trim();
+                const senderName = (u.message.from && u.message.from.first_name) || "Warga";
+                handleCommand(chatId, text, senderName, userId);
+                markProcessed(u.update_id);
+            }
+        });
+
+        if (maxId > lastId) {
+            props.setProperty("LAST_UPDATE_ID", String(maxId));
+        }
+
+        Logger.log("pollTelegram processed " + updates.length + " updates");
+    } catch (e) {
+        Logger.log("pollTelegram error: " + e.toString());
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+function setupPollingTrigger() {
+    const triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach((t) => {
+        if (t.getHandlerFunction && t.getHandlerFunction() === "pollTelegram") {
+            ScriptApp.deleteTrigger(t);
+        }
+    });
+
+    ScriptApp.newTrigger("pollTelegram").timeBased().everyMinutes(1).create();
+
+    try {
+        deleteWebhook(true);
+    } catch (e) {
+        Logger.log("setupPollingTrigger deleteWebhook error: " + e.toString());
+    }
+
+    Logger.log("Polling trigger created (every 1 minute)");
+}
+
+function stopPollingTrigger() {
+    const triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach((t) => {
+        if (t.getHandlerFunction && t.getHandlerFunction() === "pollTelegram") {
+            ScriptApp.deleteTrigger(t);
+        }
+    });
+    Logger.log("Polling trigger removed");
 }
 
 // Ekspos fungsi ke lingkungan Node (Jest) tanpa memengaruhi Google Apps Script
@@ -456,10 +558,14 @@ if (typeof module !== "undefined" && module.exports) {
         setGroupChatId,
         getGroupChatId,
         getProcessedUpdateIds,
+        isAckOnly,
         isProcessed,
         markProcessed,
         deleteWebhook,
         setWebhook,
+        pollTelegram,
+        setupPollingTrigger,
+        stopPollingTrigger,
         getSpreadsheet,
         handleStart,
         handleKas,
