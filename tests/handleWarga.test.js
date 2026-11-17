@@ -4,6 +4,7 @@ const { setSpreadsheet } = require("./helpers/mockSheet");
 describe("handleWarga", () => {
   beforeEach(() => {
     global.UrlFetchApp = { fetch: jest.fn(() => ({ getContentText: () => "" })) };
+    pakrt.setAdminIds([]);
   });
 
   test("sheet kosong -> 0 KK dan 0 jiwa", () => {
@@ -37,11 +38,12 @@ describe("handleWarga", () => {
     expect(text).toContain("Laki-laki: 1 · Perempuan: 2");
   });
 
-  test("/warga <id_kk> menampilkan detail KK dan anggota", () => {
+  test("/warga <id_kk> menampilkan detail untuk admin", () => {
+    pakrt.setAdminIds([1]);
     setSpreadsheet(
       dasar({
         Keluarga: buatSheet("Keluarga", [
-          { id_kk: "KK-001", no_rumah: "A1", nama_kk: "Budi", status: "Aktif", mulai_iuran: "2026-01" },
+          { id_kk: "KK-001", no_rumah: "A1", nama_kk: "Budi", status: "Aktif", mulai_iuran: "2026-01", no_hp: "0812" },
         ]),
         Anggota: buatSheet("Anggota", [
           { id_kk: "KK-001", nama: "Budi", hubungan: "Kepala Keluarga", jenis_kelamin: "L", status: "Aktif" },
@@ -53,7 +55,47 @@ describe("handleWarga", () => {
     const text = teksTerakhir();
     expect(text).toContain("Budi");
     expect(text).toContain("Rina");
+    expect(text).toContain("0812");
     expect(text).toContain("Anggota (2)");
+  });
+
+  test("non-admin tanpa keterkaitan hanya melihat kartu ringkas tanpa No HP", () => {
+    setSpreadsheet(
+      dasar({
+        Keluarga: buatSheet("Keluarga", [
+          { id_kk: "KK-001", no_rumah: "A1", nama_kk: "Budi", status: "Aktif", no_hp: "0812" },
+        ]),
+        Anggota: buatSheet("Anggota", [
+          { id_kk: "KK-001", nama: "Budi", hubungan: "Kepala Keluarga", jenis_kelamin: "L", status: "Aktif" },
+        ]),
+      })
+    );
+    pakrt.handleWarga(1, "/warga KK-001", "X", 77);
+    const text = teksTerakhir();
+    expect(text).toContain("Jumlah anggota: 1");
+    expect(text).not.toContain("0812");
+    expect(text).toContain("/gabung KK-001");
+  });
+
+  test("akun terhubung bisa melihat detail KK-nya", () => {
+    setSpreadsheet(
+      dasar({
+        Keluarga: buatSheet("Keluarga", [
+          { id_kk: "KK-001", no_rumah: "A1", nama_kk: "Budi", status: "Aktif", no_hp: "0812" },
+        ]),
+        Anggota: buatSheet("Anggota", [
+          { id_kk: "KK-001", nama: "Budi", hubungan: "Kepala Keluarga", jenis_kelamin: "L", status: "Aktif" },
+          { id_kk: "KK-001", nama: "Rina", hubungan: "Istri", jenis_kelamin: "P", status: "Aktif" },
+        ]),
+        TelegramUser: buatSheet("TelegramUser", [
+          { id_telegram: "77", id_kk: "KK-001", status: "aktif" },
+        ]),
+      })
+    );
+    pakrt.handleWarga(1, "/warga KK-001", "X", 77);
+    const text = teksTerakhir();
+    expect(text).toContain("Rina");
+    expect(text).toContain("0812");
   });
 
   test("identifier tidak ditemukan -> pesan error", () => {

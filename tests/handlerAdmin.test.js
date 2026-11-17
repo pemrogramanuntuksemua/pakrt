@@ -221,10 +221,10 @@ describe("handler tagihan & tunggakan", () => {
     expect(text).not.toContain("/bayar KK-001");
   });
 
-  test("/tagihan non-admin ditolak", () => {
+  test("/tagihan non-admin tanpa keterkaitan -> arahan /gabung", () => {
     setup();
     pakrt.handleTagihan(1, "/tagihan KK-001", "X", 999);
-    expect(teksTerakhir()).toContain("Akses Ditolak");
+    expect(teksTerakhir()).toContain("hanya bisa melihat tagihan KK yang terhubung");
   });
 
   test("/tunggakan global merangkum penunggak", () => {
@@ -248,10 +248,10 @@ describe("handler tagihan & tunggakan", () => {
     expect(text).toContain("Total: *Rp 50.000*");
   });
 
-  test("/tunggakan non-admin ditolak", () => {
+  test("/tunggakan non-admin tanpa keterkaitan -> arahan /gabung", () => {
     setup();
     pakrt.handleTunggakan(1, "/tunggakan", "X", 999);
-    expect(teksTerakhir()).toContain("Akses Ditolak");
+    expect(teksTerakhir()).toContain("belum terhubung");
   });
 });
 

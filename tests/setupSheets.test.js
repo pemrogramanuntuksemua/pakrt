@@ -1,7 +1,7 @@
 const { pakrt, buatSheet } = require("./helpers/fixtures");
 const { setSpreadsheet, createMockSheet } = require("./helpers/mockSheet");
 
-const SKEMA = ["Setting", "Keluarga", "Anggota", "TarifIuran", "AlokasiIuran", "Tagihan", "TutupBuku", "TutupBukuAlokasi"];
+const SKEMA = ["Setting", "Keluarga", "Anggota", "TarifIuran", "AlokasiIuran", "Tagihan", "TutupBuku", "TutupBukuAlokasi", "TelegramUser"];
 
 function pasangBackup() {
   const calls = [];

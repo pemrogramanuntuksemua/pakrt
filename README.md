@@ -33,6 +33,7 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 | `Kas` | `tanggal, keterangan, jenis, nominal, alokasi, ref, dicatat_oleh` |
 | `TutupBuku` | `periode, jenis, tarif, total_kk, total_jiwa, total_tagihan, total_terbayar, total_masuk, total_keluar, saldo_awal, saldo_akhir, ditutup_oleh, ditutup_pada` |
 | `TutupBukuAlokasi` | `periode, kode, saldo_awal, masuk, keluar, pindah_masuk, pindah_keluar, saldo_akhir` |
+| `TelegramUser` | `id_telegram, username, nama, id_kk, peran, status, diminta_pada, diverifikasi_oleh, diverifikasi_pada` |
 | `Pengumuman` | `timestamp, kategori, isi, pengirim` |
 
 ### Aturan data
@@ -46,6 +47,7 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 - **Kas multi-kantong.** Setiap kantong punya nominal tetap; tepat satu kantong bertanda `sisa = TRUE` menampung selisih. Kode kantong huruf kecil/angka, maksimal 8 karakter (default: `kasrt`, `dkmt`, `kamsih`).
 - **Baris `Kas` lama** tanpa `alokasi` dianggap masuk ke `kasrt` (lihat migrasi).
 - **Tutup buku** menyimpan snapshot `TutupBuku` + `TutupBukuAlokasi`. Jumlah saldo akhir semua kantong harus sama dengan saldo akhir total. Tutup buku tahunan ditolak sampai 12 bulan pada tahun itu ditutup.
+- **Keterkaitan Telegram ↔ KK** disimpan di tab `TelegramUser` (bukan kolom di `Keluarga`), karena satu akun Telegram boleh mewakili beberapa KK. Status: `menunggu`, `aktif`, `ditolak`, `dicabut`. Baris `ditolak`/`dicabut` dipakai ulang saat akun mengajukan lagi. Lihat bagian [Keterkaitan akun Telegram ↔ KK](#keterkaitan-akun-telegram--kk).
 
 ### Setting awal
 
@@ -57,6 +59,8 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 | `reminder_aktif` | `false` | Pengingat otomatis (belum aktif) |
 | `iuran_mulai_default` | `2026-01` | Periode mulai iuran KK baru |
 | `backfill_mulai` | `2026-01` | Periode awal backfill tagihan |
+| `maks_telegram_per_kk` | `2` | Maks akun Telegram (menunggu + aktif) per KK; `0` = tanpa batas |
+| `maks_kk_per_telegram` | `5` | Maks KK aktif per akun Telegram; `0` = tanpa batas |
 
 ## Inisialisasi & reset
 
@@ -70,7 +74,7 @@ Perintah ini **hanya dijalankan dari editor Apps Script**, tidak lewat menu, `on
 | `setupSheets({ mode: "fresh", backup: true })` / `resetSemuaSheet()` | Sama seperti reset, tetapi juga menghapus `Kas` dan `Pengumuman`. |
 
 - Mode `reset` / `fresh` selalu membuat backup ke Drive lebih dulu (`backup: false` hanya untuk keperluan uji).
-- Sheet skema yang dihapus saat reset: `Setting`, `Keluarga`, `Anggota`, `TarifIuran`, `AlokasiIuran`, `Tagihan`, `TutupBuku`, `TutupBukuAlokasi`.
+- Sheet skema yang dihapus saat reset: `Setting`, `Keluarga`, `Anggota`, `TarifIuran`, `AlokasiIuran`, `Tagihan`, `TutupBuku`, `TutupBukuAlokasi`, `TelegramUser`.
 - Data yang dipertahankan saat reset: `Kas`, `Pengumuman`, dan `Warga`/`Warga_lama`.
 - `setupSheets` juga menerima `{ spreadsheet }` atau `{ spreadsheetId }`; `{ backfill: true }` langsung membuat tagihan dari `backfill_mulai` sampai bulan berjalan.
 - `backupSekarang()` membuat backup manual.
@@ -103,7 +107,13 @@ Jalankan berurutan dari editor:
 | `/kas <YYYY-MM>` | Saldo akhir bulan tertentu | `/kas 2026-03` |
 | `/alokasi` | Pembagian iuran ke kantong | `/alokasi` |
 | `/warga` | Jumlah KK aktif & jiwa | `/warga` |
-| `/warga <id_kk/no_rumah/nama>` | Detail KK + anggota | `/warga KK-001` |
+| `/warga <id_kk/no_rumah/nama>` | Detail KK + anggota (detail penuh hanya untuk pengurus atau akun yang terhubung) | `/warga KK-001` |
+| `/gabung <id_kk/no_rumah/nama>` | Ajukan keterkaitan akun Telegram ke KK (hanya lewat DM) | `/gabung KK-001` |
+| `/saya` | Cek KK & status keterkaitan akun ini (hanya lewat DM) | `/saya` |
+| `/tagihan` | Tagihan KK yang terhubung (hanya lewat DM) | `/tagihan` |
+| `/tagihan <id_kk>` | Tagihan salah satu KK yang terhubung | `/tagihan KK-001` |
+| `/tunggakan` | Tunggakan KK yang terhubung (hanya lewat DM) | `/tunggakan` |
+| `/tunggakan <id_kk>` | Tunggakan salah satu KK yang terhubung | `/tunggakan KK-001` |
 | `/pengumuman` | 5 pengumuman terbaru | `/pengumuman` |
 
 ### Khusus pengurus (`ADMIN_IDS`)
@@ -115,9 +125,12 @@ Jalankan berurutan dari editor:
 | `/tarif` | Riwayat & tarif berlaku | `/tarif` |
 | `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan` | Tambah KK + kepala keluarga | `/tambahkk Budi#0812#A1#Jl. Mawar#` |
 | `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD#Catatan` | Tambah anggota | `/tambahanggota KK-001#Rina#Istri#P#2010-05-01` |
-| `/tagihan <id_kk/no_rumah/nama>` | Rincian tagihan & tunggakan | `/tagihan KK-001` |
+| `/tagihan <id_kk/no_rumah/nama>` | Rincian tagihan & tunggakan KK mana pun | `/tagihan KK-001` |
 | `/bayar <id> [YYYY-MM ...]` | Catat iuran (satu-satunya jalur resmi) | `/bayar KK-001 2026-03 2026-04` |
-| `/tunggakan [id\|YYYY-MM]` | Ringkasan tunggakan | `/tunggakan` |
+| `/tunggakan [id\|YYYY-MM]` | Ringkasan tunggakan (global atau per KK) | `/tunggakan` |
+| `/verifikasi <id_kk\|id_telegram>` | Setujui pengajuan keterkaitan akun | `/verifikasi KK-001` |
+| `/tolak <id_kk\|id_telegram>` | Tolak pengajuan keterkaitan akun | `/tolak 123456789` |
+| `/cabut <id_kk\|id_telegram>` | Putuskan akun dari KK | `/cabut KK-001` |
 | `/rekap [YYYY-MM\|YYYY] [YYYY-MM]` | Target vs terbayar | `/rekap 2026-01 2026-03` |
 | `/daftar [semua\|tagihan\|nama\|rumah] [halaman]` | Daftar KK & tunggakan | `/daftar tagihan` |
 | `/tambahkas jenis#alokasi#nominal#keterangan` | Kas masuk/keluar manual | `/tambahkas keluar#kamsih#400000#Honor satpam` |
@@ -131,6 +144,35 @@ Catatan:
 - `/tambahwarga` sudah **diganti** (bukan alias) dan akan mengarahkan ke `/tambahkk` + `/tambahanggota`.
 - Format lama `/tambahkas masuk#50000#Keterangan` akan ditolak dengan pesan perubahan format karena kantong wajib disebut.
 - Periode yang sudah ditutup bersifat read-only: `/bayar`, `/tambahkas`, `/pindahkas`, dan perubahan tarif ditolak. `/rekap` menandai periode tertutup dengan 🔒.
+
+## Keterkaitan akun Telegram ↔ KK
+
+Tidak ada SMS gateway. Verifikasi akun dilakukan manual oleh pengurus lewat Telegram.
+
+### Alur pendaftaran
+
+1. Warga mengirim `/gabung <id_kk>` **lewat DM bot** (contoh: `/gabung KK-001`). Bisa juga memakai `no_rumah` atau `nama_kk`.
+2. Sistem menulis baris `TelegramUser` berstatus `menunggu` lalu mengirim DM berisi identitas pemohon ke **setiap** ID di `ADMIN_IDS`. Kegagalan kirim notifikasi hanya dicatat di log, tidak membatalkan pengajuan.
+3. Pengurus menjalankan `/verifikasi <id_kk>` (atau `/verifikasi <id_telegram>`) untuk menyetujui, atau `/tolak <...>` untuk menolak. Pemohon menerima DM hasilnya.
+4. Setelah `aktif`, warga bisa memakai `/saya`, `/tagihan`, dan `/tunggakan`.
+
+### Aturan & batas
+
+- **Status:** `menunggu` → `aktif` / `ditolak`; akun aktif bisa menjadi `dicabut`.
+- **Kuota akun per KK** (`maks_telegram_per_kk`, default `2`): menghitung baris `menunggu` + `aktif`. Baris `ditolak`/`dicabut` tidak dihitung.
+- **Kuota KK per akun** (`maks_kk_per_telegram`, default `5`): hanya menghitung keterkaitan `aktif`. Satu akun tetap boleh mengajukan KK baru selama kuota belum penuh.
+- Nilai `0` berarti **tanpa batas** untuk kedua kuota.
+- **Ajukan ulang:** pengajuan untuk pasangan akun + KK yang sama bersifat idempoten. Baris `ditolak`/`dicabut` dipakai ulang dan dikembalikan ke `menunggu`, bukan membuat baris baru.
+- **Ambigu:** bila satu KK punya lebih dari satu pengajuan `menunggu`, `/verifikasi <id_kk>` dan `/tolak <id_kk>` akan meminta `id_telegram` agar tidak salah akun.
+- **Pencabutan:** `/cabut <id_kk>` memutus semua akun aktif pada KK tersebut, sedangkan `/cabut <id_telegram>` memutus semua KK untuk akun itu.
+- KK berstatus selain `Aktif` tidak bisa dihubungkan.
+
+### Privasi di grup
+
+- `/gabung`, `/saya`, `/tagihan`, dan `/tunggakan` untuk warga **hanya berjalan di DM**. Di grup, bot hanya membalas arahan untuk mengirim lewat DM.
+- Pesan grup tidak pernah memuat `id_telegram` atau `no_hp`.
+- `/warga <id_kk>` menampilkan detail penuh (No HP, alamat, anggota) hanya untuk pengurus atau akun yang terhubung ke KK itu. Akun lain hanya melihat kartu ringkas (no rumah, status, jumlah anggota) beserta arahan `/gabung`.
+- Perilaku pengurus tidak berubah: `/tagihan` dan `/tunggakan` tanpa argumen tetap menampilkan data semua KK.
 
 ## Menjalankan unit test
 
