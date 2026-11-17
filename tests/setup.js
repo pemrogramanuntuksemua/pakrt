@@ -10,6 +10,10 @@ global.ContentService = {
 };
 global.Logger = { log: () => {} };
 
+global.HtmlService = {
+  createHtmlOutput: (text) => ({ _text: text }),
+};
+
 global.LockService = {
   getScriptLock: () => ({
     tryLock: () => true,

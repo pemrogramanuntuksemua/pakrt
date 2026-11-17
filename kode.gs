@@ -174,8 +174,7 @@ function doPost(e) {
         // Mode debug: hanya ACK 200 tanpa memproses (untuk uji webhook/pending)
         if (isAckOnly()) {
             Logger.log("ACK_ONLY mode: returning 200 ms=" + (new Date().getTime() - startTime));
-            return ContentService.createTextOutput("<html><body>OK</body></html>")
-                .setMimeType(ContentService.MimeType.HTML);
+            return HtmlService.createHtmlOutput("OK");
         }
 
         const data = JSON.parse(e.postData.contents);
@@ -185,8 +184,7 @@ function doPost(e) {
 
         if (isProcessed(updateId)) {
             Logger.log("Duplicate update ignored: " + updateId + " ms=" + (new Date().getTime() - startTime));
-            return ContentService.createTextOutput("<html><body>OK</body></html>")
-                .setMimeType(ContentService.MimeType.HTML);
+            return HtmlService.createHtmlOutput("OK");
         }
         markProcessed(updateId);
 
@@ -201,13 +199,11 @@ function doPost(e) {
         }
 
         Logger.log("doPost end update_id=" + updateId + " ms=" + (new Date().getTime() - startTime));
-        return ContentService.createTextOutput("<html><body>OK</body></html>")
-            .setMimeType(ContentService.MimeType.HTML);
+        return HtmlService.createHtmlOutput("OK");
 
     } catch (error) {
         Logger.log("doPost error: " + error.toString() + " ms=" + (new Date().getTime() - startTime));
-        return ContentService.createTextOutput("<html><body>Error: " + error.toString() + "</body></html>")
-            .setMimeType(ContentService.MimeType.HTML);
+        return HtmlService.createHtmlOutput("Error: " + error.toString());
     }
 }
 
@@ -443,8 +439,7 @@ function handleAdmin(chatId, text, senderName, userId)
 function handleCommand(chatId, text, senderName, userId) {
     if (!chatId) {
         Logger.log("Error: " + 'chatId is empty');
-        return ContentService.createTextOutput("<html><body>Failed</body></html>")
-            .setMimeType(ContentService.MimeType.HTML);
+        return HtmlService.createHtmlOutput("Failed");
     }
 
     let replyText = "";

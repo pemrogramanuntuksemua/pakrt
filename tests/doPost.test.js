@@ -26,8 +26,7 @@ describe("doPost", () => {
       },
     };
     const res = pakrt.doPost(e);
-    const out = JSON.parse(res && res._text ? res._text : "{}");
-    // mock returns object without text; just ensure fetch called
+    // respons HTML; cukup pastikan fetch terpanggil
     expect(fetchMock).toHaveBeenCalled();
   });
 
