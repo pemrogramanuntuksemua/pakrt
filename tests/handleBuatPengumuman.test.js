@@ -21,7 +21,7 @@ describe("handleBuatPengumuman", () => {
   });
 
   test("non-admin -> akses ditolak", () => {
-    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info Halo", "X", 999);
+    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info#Halo", "X", 999);
     expect(payloadTexts()[0]).toContain("Akses Ditolak");
   });
 
@@ -35,7 +35,7 @@ describe("handleBuatPengumuman", () => {
     pakrt.setAdminIds([1]);
     const sheet = createMockSheet([["tgl", "kat", "isi", "oleh"]]);
     setSpreadsheet({ Pengumuman: sheet });
-    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info Halo warga", "Budi", 1);
+    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info#Halo warga", "Budi", 1);
     expect(sheet._appended.length).toBe(1);
     const row = sheet._appended[0];
     expect(row[1]).toBe("Info");
@@ -49,7 +49,7 @@ describe("handleBuatPengumuman", () => {
     pakrt.setGroupChatId("999");
     const sheet = createMockSheet([["tgl", "kat", "isi", "oleh"]]);
     setSpreadsheet({ Pengumuman: sheet });
-    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info Halo", "Budi", 1);
+    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info#Halo", "Budi", 1);
     const texts = payloadTexts();
     expect(texts.length).toBe(2);
     expect(texts[0]).toContain("PENGUMUMAN RT");
@@ -59,7 +59,7 @@ describe("handleBuatPengumuman", () => {
   test("tab tidak ada -> peringatan", () => {
     pakrt.setAdminIds([1]);
     setSpreadsheet({});
-    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info Halo", "Budi", 1);
+    pakrt.handleBuatPengumuman(1, "/buatpengumuman Info#Halo", "Budi", 1);
     expect(payloadTexts()[0]).toContain("Tab 'Pengumuman' belum dibuat");
   });
 });

@@ -16,6 +16,7 @@ const CMD_START = "/start";
 const CMD_KAS = "/kas";
 const CMD_TAMBAHKAS = "/tambahkas";
 const CMD_WARGA = "/warga";
+const CMD_TAMBAHWARGA = "/tambahwarga";
 const CMD_ADMIN = "/admin";
 const CMD_PENGUMUMAN = "/pengumuman";
 const CMD_BUATPENGUMUMAN = "/buatpengumuman";
@@ -26,6 +27,7 @@ const PREFIX_HANDLERS = {
   [CMD_KAS]: handleKas,
   [CMD_TAMBAHKAS]: handleTambahKas,
   [CMD_WARGA]: handleWarga,
+  [CMD_TAMBAHWARGA]: handleTambahWarga,
   [CMD_PENGUMUMAN]: handlePengumuman,
   [CMD_BUATPENGUMUMAN]: handleBuatPengumuman,
 };
@@ -172,7 +174,8 @@ function doPost(e) {
         // Mode debug: hanya ACK 200 tanpa memproses (untuk uji webhook/pending)
         if (isAckOnly()) {
             Logger.log("ACK_ONLY mode: returning 200 ms=" + (new Date().getTime() - startTime));
-            return ContentService.createTextOutput("OK");
+            return ContentService.createTextOutput("<html><body>OK</body></html>")
+                .setMimeType(ContentService.MimeType.HTML);
         }
 
         const data = JSON.parse(e.postData.contents);
@@ -182,8 +185,8 @@ function doPost(e) {
 
         if (isProcessed(updateId)) {
             Logger.log("Duplicate update ignored: " + updateId + " ms=" + (new Date().getTime() - startTime));
-            return ContentService.createTextOutput(JSON.stringify({ status: "success", duplicate: true }))
-                .setMimeType(ContentService.MimeType.JSON);
+            return ContentService.createTextOutput("<html><body>OK</body></html>")
+                .setMimeType(ContentService.MimeType.HTML);
         }
         markProcessed(updateId);
 
@@ -198,11 +201,13 @@ function doPost(e) {
         }
 
         Logger.log("doPost end update_id=" + updateId + " ms=" + (new Date().getTime() - startTime));
-        return HtmlService.createHtmlOutput("OK");
+        return ContentService.createTextOutput("<html><body>OK</body></html>")
+            .setMimeType(ContentService.MimeType.HTML);
 
     } catch (error) {
         Logger.log("doPost error: " + error.toString() + " ms=" + (new Date().getTime() - startTime));
-        return HtmlService.createHtmlOutput("Error" + error.toString());
+        return ContentService.createTextOutput("<html><body>Error: " + error.toString() + "</body></html>")
+            .setMimeType(ContentService.MimeType.HTML);
     }
 }
 
@@ -213,8 +218,9 @@ function handleStart(chatId, text, senderName, userId) {
         "/pengumuman - Lihat pengumuman warga terbaru\n" +
         "/warga - Cek jumlah warga terdaftar\n\n" +
         "_Perintah Pengurus:_\n" +
-        "/tambahkas [masuk/keluar] [nominal] [keterangan]\n" +
-        "/buatpengumuman [Kategori] [Isi pesan]";
+        "/tambahkas jenis#nominal#keterangan\n" +
+        "/buatpengumuman Kategori#Isi pesan\n" +
+        "/tambahwarga Nama#No HP#No Rumah#Jenis Kelamin#Alamat#Catatan";
 
     sendTelegramMessage(chatId, replyText);
 }
@@ -322,14 +328,13 @@ function handleBuatPengumuman(chatId, text, senderName, userId)
     }
 
     const textClean = text.replace("/buatpengumuman", "").trim();
-    const firstSpace = textClean.indexOf(" ");
+    const parts = textClean.split("#").map((p) => p.trim());
+    const kategori = parts[0] || "";
+    const isiPesan = parts.slice(1).join("#").trim();
 
-    if (firstSpace === -1) {
-        replyText = `⚠️ *Format Salah!*\nGunakan: \`/buatpengumuman [Kategori] [Isi Pesan]\``;
+    if (!kategori || !isiPesan) {
+        replyText = `⚠️ *Format Salah!*\nGunakan: \`/buatpengumuman Kategori#Isi Pesan\``;
     } else {
-        const kategori = textClean.substring(0, firstSpace).trim();
-        const isiPesan = textClean.substring(firstSpace + 1).trim();
-
         const sheet = getSpreadsheet("Pengumuman");
         if (!sheet) {
             sendTelegramMessage(chatId, "⚠️ Tab 'Pengumuman' belum dibuat di Google Sheets.");
@@ -352,6 +357,48 @@ function handleBuatPengumuman(chatId, text, senderName, userId)
     sendTelegramMessage(chatId, replyText);
 }
 
+
+function handleTambahWarga(chatId, text, senderName, userId)
+{
+    let replyText = "";
+
+    if (!isAdmin(userId)) {
+        sendTelegramMessage(chatId, "⛔ *Akses Ditolak!*\n\nPerintah ini khusus untuk Pengurus RT.");
+        return;
+    }
+
+    const textClean = text.replace("/tambahwarga", "").trim();
+    const parts = textClean.split("#").map((p) => p.trim());
+    const nama = parts[0] || "";
+    const noHp = parts[1] || "";
+    const noRumah = parts[2] || "";
+    const jenisKelamin = parts[3] || "";
+    const alamat = parts[4] || "";
+    const catatan = parts.slice(5).join("#").trim();
+
+    if (!nama || !noHp || !noRumah || !jenisKelamin || !alamat) {
+        replyText = `⚠️ *Format Salah!*\nGunakan: \`/tambahwarga Nama#No HP#No Rumah#Jenis Kelamin#Alamat#Catatan\``;
+    } else {
+        const sheet = getSpreadsheet("Warga");
+        if (!sheet) {
+            sendTelegramMessage(chatId, "⚠️ Tab 'Warga' belum dibuat di Google Sheets.");
+            return;
+        }
+
+        sheet.appendRow([nama, noHp, noRumah, jenisKelamin, alamat, catatan]);
+
+        replyText = `✅ *Warga Berhasil Ditambahkan!*\n\n` +
+            `👤 Nama: *${nama}*\n` +
+            `📞 No HP: *${noHp}*\n` +
+            `🏠 No Rumah: *${noRumah}*\n` +
+            `⚧ Jenis Kelamin: *${jenisKelamin}*\n` +
+            `📍 Alamat: *${alamat}*\n` +
+            `📝 Catatan: *${catatan || "-"}*`;
+    }
+
+    sendTelegramMessage(chatId, replyText);
+}
+
 function handleTambahKas(chatId, text, senderName, userId)
 {
     let replyText = "";
@@ -362,22 +409,15 @@ function handleTambahKas(chatId, text, senderName, userId)
     }
 
     const textClean = text.replace("/tambahkas", "").trim();
-    const firstSpace = textClean.indexOf(" ");
+    const parts = textClean.split("#").map((p) => p.trim());
+    const jenis = (parts[0] || "").toLowerCase();
+    const nominalStr = parts[1] || "";
+    const keterangan = parts.length >= 3 ? parts.slice(2).join("#").trim() : "Tanpa Keterangan";
+    const nominal = Number(nominalStr);
 
-    if (firstSpace === -1) {
-        replyText = `⚠️ *Format Salah!*\nGunakan: \`/tambahkas [masuk/keluar] [nominal] [keterangan]\``;
+    if (jenis !== "masuk" && jenis !== "keluar" || isNaN(nominal) || nominal <= 0 || !nominalStr) {
+        replyText = `⚠️ Format salah atau nominal bukan angka.\nContoh: \`/tambahkas masuk#50000#Iuran Budi\``;
     } else {
-        const jenis = textClean.substring(0, firstSpace).toLowerCase();
-        const sisaText = textClean.substring(firstSpace + 1).trim();
-        const secondSpace = sisaText.indexOf(" ");
-
-        let nominalStr = secondSpace === -1 ? sisaText : sisaText.substring(0, secondSpace);
-        let keterangan = secondSpace === -1 ? "Tanpa Keterangan" : sisaText.substring(secondSpace + 1).trim();
-        const nominal = Number(nominalStr);
-
-        if (jenis !== "masuk" && jenis !== "keluar" || isNaN(nominal) || nominal <= 0) {
-            replyText = `⚠️ Format salah atau nominal bukan angka.\nContoh: \`/tambahkas masuk 50000 Iuran Budi\``;
-        } else {
             const sheet = getSpreadsheet("Kas");
             if (!sheet) {
                 sendTelegramMessage(chatId, "⚠️ Tab 'Kas' belum dibuat di Google Sheets.");
@@ -389,7 +429,6 @@ function handleTambahKas(chatId, text, senderName, userId)
 
             const emoji = jenis === "masuk" ? "📥" : "📤";
             replyText = `✅ *Kas Berhasil Dicatat!*\n\n${emoji} Jenis: *${jenis.toUpperCase()}*\n💰 Nominal: *Rp ${nominal.toLocaleString('id-ID')}*\n📝 Keterangan: *${keterangan}*`;
-        }
     }
 
     sendTelegramMessage(chatId, replyText);
@@ -404,8 +443,8 @@ function handleAdmin(chatId, text, senderName, userId)
 function handleCommand(chatId, text, senderName, userId) {
     if (!chatId) {
         Logger.log("Error: " + 'chatId is empty');
-        return ContentService.createTextOutput(JSON.stringify({ status: "failed" }))
-            .setMimeType(ContentService.MimeType.JSON);
+        return ContentService.createTextOutput("<html><body>Failed</body></html>")
+            .setMimeType(ContentService.MimeType.HTML);
     }
 
     let replyText = "";
@@ -446,8 +485,6 @@ function sendTelegramMessage(chatId, text) {
 
     try {
         const res = UrlFetchApp.fetch(url, options);
-        // delete pending
-        setWebhook(true);
         Logger.log(res.getContentText());
     } catch (error) {
         Logger.log("Error: " + error.toString());
@@ -572,6 +609,7 @@ if (typeof module !== "undefined" && module.exports) {
         handlePengumuman,
         handleBuatPengumuman,
         handleTambahKas,
+        handleTambahWarga,
         handleAdmin,
         handleCommand,
         doPost,

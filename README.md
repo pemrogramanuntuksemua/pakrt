@@ -64,9 +64,10 @@ Test berada di folder `tests/` dan menggunakan Jest dengan mock global Google Ap
    - Atau panggil URL: `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<WEBHOOK_URL>&drop_pending_updates=true`
    - Alternatif: `deleteWebhook(true)` lalu `setWebhook()`.
 4. Pastikan pakai URL Web App `/exec` (bukan `/dev`) dan `doPost` mengembalikan 200 OK.
-5. Debug ACK-only: set Script Property `ACK_ONLY=true`, kirim pesan, cek pending turun. Jika turun, masalah ada di proses (Sheet/Token). Set `ACK_ONLY=false` untuk normal.
-6. Health check: buka URL Web App `/exec` di browser → harus tampil `OK`.
-7. Deploy ulang setiap perubahan kode (New deployment), lalu `setWebhook(true)` dengan URL `/exec`.
+5. `doPost` mengembalikan HTML (bukan JSON) agar Telegram ACK dan pending count turun.
+6. Debug ACK-only: set Script Property `ACK_ONLY=true`, kirim pesan, cek pending turun. Jika turun, masalah ada di proses (Sheet/Token). Set `ACK_ONLY=false` untuk normal.
+7. Health check: buka URL Web App `/exec` di browser → harus tampil `OK`.
+8. Deploy ulang setiap perubahan kode (New deployment), lalu `setWebhook(true)` dengan URL `/exec`.
 
 ## Polling (alternatif webhook)
 
