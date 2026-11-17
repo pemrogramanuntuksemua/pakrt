@@ -39,7 +39,7 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 ### Aturan data
 
 - **KK vs anggota.** `Keluarga` adalah unit penagihan/admin; `Anggota` dihitung sebagai jumlah jiwa. Satu rumah boleh punya lebih dari satu KK. `id_kk` adalah kunci utama; `no_rumah` hanya atribut.
-- **Kepala keluarga** otomatis dibuat sebagai baris `Anggota` dengan `hubungan = Kepala Keluarga` saat `/tambahkk`.
+- **Kepala keluarga** otomatis dibuat sebagai baris `Anggota` dengan `hubungan = Kepala Keluarga` saat `/tambahkk`. `jenis_kelamin` dan `tanggal_lahir` belum diisi; lengkapi lewat `/editanggota`.
 - **Tagihan per KK**, bukan per orang. Riwayat tarif disimpan di `TarifIuran.berlaku_mulai`; tarif berlaku = baris terbaru dengan periode ≤ periode tagihan.
 - **`Tagihan` adalah sumber kebenaran.** Baris historis tidak pernah dihitung ulang atau dihapus. Perubahan tarif hanya menyentuh tagihan berstatus `belum`; yang sudah `lunas` tidak diubah.
 - **Status tagihan:** `belum`, `lunas`, plus cadangan `bebas` dan `batal`. Tidak ada pembayaran sebagian.
@@ -126,6 +126,7 @@ Jalankan berurutan dari editor:
 | `/tarif` | Riwayat & tarif berlaku | `/tarif` |
 | `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan` | Tambah KK + kepala keluarga | `/tambahkk Budi#0812#A1#Jl. Mawar#` |
 | `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD#Catatan` | Tambah anggota | `/tambahanggota KK-001#Rina#Istri#P#2010-05-01` |
+| `/editanggota id_kk#Nama#kolom=nilai` | Ubah data anggota (nama, hubungan, jk, lahir, status, catatan) | `/editanggota KK-001#Budi#jk=L#lahir=1990-01-01` |
 | `/tagihan <id_kk/no_rumah/nama>` | Rincian tagihan & tunggakan KK mana pun | `/tagihan KK-001` |
 | `/bayar <id> [YYYY-MM ...]` | Catat iuran (satu-satunya jalur resmi) | `/bayar KK-001 2026-03 2026-04` |
 | `/tunggakan [id\|YYYY-MM]` | Ringkasan tunggakan (global atau per KK) | `/tunggakan` |
@@ -145,6 +146,7 @@ Jalankan berurutan dari editor:
 Catatan:
 
 - `/tambahwarga` sudah **diganti** (bukan alias) dan akan mengarahkan ke `/tambahkk` + `/tambahanggota`.
+- `/editanggota` mencari anggota berdasarkan `id_kk` + nama persis. Kolom yang didukung: `nama`, `hubungan`, `jk` (alias `jenis_kelamin`), `lahir` (alias `tanggal_lahir`), `status`, `catatan`. Gunakan `-` untuk mengosongkan tanggal lahir/catatan. Rename kepala keluarga otomatis menyinkronkan `Keluarga.nama_kk`.
 - Format lama `/tambahkas masuk#50000#Keterangan` akan ditolak dengan pesan perubahan format karena kantong wajib disebut.
 - Periode yang sudah ditutup bersifat read-only: `/bayar`, `/tambahkas`, `/pindahkas`, dan perubahan tarif ditolak. `/rekap` menandai periode tertutup dengan 🔒.
 - Admin tambahan punya akses perintah pengurus yang sama, tetapi hanya admin inti (`ADMIN_IDS`) yang bisa menambah/menghapusnya. `/set admin_tambahan` sengaja ditolak dan diarahkan ke `/admin`.

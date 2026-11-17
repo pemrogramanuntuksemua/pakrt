@@ -18,6 +18,7 @@ describe("handleStart", () => {
     expect(payload.text).toContain("/tambahkas");
     expect(payload.text).toContain("/admin");
     expect(payload.text).toContain("`/gabung <id_kk>`");
+    expect(payload.text).toContain("/editanggota");
     expect(payload.text).toContain(
       "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`"
     );

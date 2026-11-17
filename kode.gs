@@ -58,6 +58,7 @@ const CMD_WARGA = "/warga";
 const CMD_TAMBAHWARGA = "/tambahwarga";
 const CMD_TAMBAHKK = "/tambahkk";
 const CMD_TAMBAHANGGOTA = "/tambahanggota";
+const CMD_EDITANGGOTA = "/editanggota";
 const CMD_ADMIN = "/admin";
 const CMD_PENGUMUMAN = "/pengumuman";
 const CMD_BUATPENGUMUMAN = "/buatpengumuman";
@@ -87,6 +88,7 @@ const PREFIX_HANDLERS = {
   [CMD_TAMBAHWARGA]: handleTambahWarga,
   [CMD_TAMBAHKK]: handleTambahKK,
   [CMD_TAMBAHANGGOTA]: handleTambahAnggota,
+  [CMD_EDITANGGOTA]: handleEditAnggota,
   [CMD_PENGUMUMAN]: handlePengumuman,
   [CMD_BUATPENGUMUMAN]: handleBuatPengumuman,
   [CMD_SETTING]: handleSetting,
@@ -625,6 +627,100 @@ function tambahAnggota(idKK, data) {
     catatan: str(d.catatan),
   });
   return daftar.concat([{ id_kk: kk.id_kk, nama: nama, hubungan: hubungan }]);
+}
+
+function ubahAnggota(idKK, namaLama, perubahan) {
+  const kk = cariKeluarga(idKK);
+  const daftar = getAnggota(kk.id_kk);
+  const target = str(namaLama).toLowerCase();
+  if (!target) throw new Error("Sebutkan nama anggota yang diubah.");
+  const cocok = daftar.filter((a) => a.nama.toLowerCase() === target);
+  if (!cocok.length) {
+    throw new Error(
+      "Anggota '" + str(namaLama) + "' tidak ditemukan di " + kk.id_kk +
+      (daftar.length ? ". Anggota: " + daftar.map((a) => a.nama).join(", ") : ".")
+    );
+  }
+  if (cocok.length > 1) {
+    throw new Error(
+      "Ada " + cocok.length + " anggota bernama '" + str(namaLama) +
+      "'. Bedakan namanya dulu atau edit sheet Anggota."
+    );
+  }
+  const a = cocok[0];
+  const d = perubahan || {};
+  const punya = (k) => Object.prototype.hasOwnProperty.call(d, k);
+  const baru = {};
+
+  if (punya("nama")) {
+    const nama = str(d.nama);
+    if (!nama) throw new Error("Nama anggota tidak boleh kosong.");
+    const bentrok = daftar.filter(
+      (x) => x._row !== a._row && x.nama.toLowerCase() === nama.toLowerCase()
+    );
+    if (bentrok.length) {
+      throw new Error("Nama '" + nama + "' sudah dipakai anggota lain di KK ini.");
+    }
+    baru.nama = nama;
+  }
+  if (punya("hubungan")) {
+    const hubungan = str(d.hubungan);
+    if (!hubungan) throw new Error("Hubungan tidak boleh kosong.");
+    if (hubungan.toLowerCase() === "kepala keluarga") {
+      const lain = daftar.filter(
+        (x) =>
+          x._row !== a._row &&
+          x.hubungan.toLowerCase() === "kepala keluarga" &&
+          x.status.toLowerCase() === "aktif"
+      );
+      if (lain.length) {
+        throw new Error("KK " + kk.id_kk + " sudah punya kepala keluarga aktif.");
+      }
+    }
+    baru.hubungan = hubungan;
+  }
+  if (punya("jenis_kelamin")) {
+    const jk = normalizeJK(d.jenis_kelamin);
+    if (jk !== "L" && jk !== "P") throw new Error("Jenis kelamin harus L atau P.");
+    baru.jenis_kelamin = jk;
+  }
+  if (punya("tanggal_lahir")) {
+    const v = str(d.tanggal_lahir);
+    if (!v || v === "-") {
+      baru.tanggal_lahir = "";
+    } else {
+      const tgl = parseTanggal(v);
+      if (!tgl) throw new Error("Tanggal lahir tidak valid. Gunakan YYYY-MM-DD.");
+      baru.tanggal_lahir =
+        tgl.getFullYear() + "-" + pad2(tgl.getMonth() + 1) + "-" + pad2(tgl.getDate());
+    }
+  }
+  if (punya("status")) {
+    const status = str(d.status);
+    const kanonik = ["Aktif", "Pindah", "Meninggal"].filter(
+      (s) => s.toLowerCase() === status.toLowerCase()
+    )[0];
+    if (!kanonik) throw new Error("Status harus Aktif, Pindah, atau Meninggal.");
+    baru.status = kanonik;
+  }
+  if (punya("catatan")) {
+    const c = str(d.catatan);
+    baru.catatan = c === "-" ? "" : c;
+  }
+  if (!Object.keys(baru).length) throw new Error("Tidak ada perubahan.");
+
+  Object.keys(baru).forEach((k) => setSel(SHEET_ANGGOTA, a._row, k, baru[k]));
+  const kepala = a.hubungan.toLowerCase() === "kepala keluarga";
+  if (baru.nama && kepala) {
+    setSel(SHEET_KELUARGA, kk._row, "nama_kk", baru.nama);
+  }
+  return {
+    id_kk: kk.id_kk,
+    nama_kk: baru.nama && kepala ? baru.nama : kk.nama_kk,
+    sebelum: a,
+    sesudah: Object.assign({}, a, baru),
+    perubahan: baru,
+  };
 }
 
 // ==========================================
@@ -1852,6 +1948,7 @@ function handleStart(chatId, text, senderName, userId) {
     "`/tarif` - Riwayat tarif iuran\n" +
     "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
     "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`\n" +
+    "`/editanggota id_kk#Nama#kolom=nilai` - Ubah data anggota\n" +
     "`/tagihan <id_kk/no_rumah/nama>` - Rincian tagihan\n" +
     "`/bayar <id_kk/no_rumah/nama> <periode...>` - Catat iuran\n" +
     "`/tunggakan` - Ringkasan tunggakan\n" +
@@ -2179,7 +2276,8 @@ function handleTambahKK(chatId, text, senderName, userId) {
         "📞 No HP: " + escMd(kk.no_hp || "-") + "\n" +
         "📍 " + escMd(kk.alamat || "-") + "\n" +
         "📅 Mulai iuran: " + kk.mulai_iuran + "\n\n" +
-        "Tambahkan anggota lain dengan `/tambahanggota " + kk.id_kk + "#Nama#Hubungan#L/P#YYYY-MM-DD`."
+        "Tambahkan anggota lain dengan `/tambahanggota " + kk.id_kk + "#Nama#Hubungan#L/P#YYYY-MM-DD`.\n" +
+        "Lengkapi data kepala keluarga: `/editanggota " + kk.id_kk + "#" + kk.nama_kk + "#jk=L#lahir=YYYY-MM-DD`."
     );
   } catch (e) {
     balasError(chatId, e);
@@ -2221,6 +2319,71 @@ function handleTambahAnggota(chatId, text, senderName, userId) {
         "🆔 KK: " + kk.id_kk + " (" + escMd(kk.nama_kk) + ")\n" +
         "🔗 Hubungan: " + escMd(hubungan) + "\n" +
         "⚧ " + (normalizeJK(jk) || "-") + " · 🎂 " + (lahir || "-")
+    );
+  } catch (e) {
+    balasError(chatId, e);
+  }
+}
+
+function handleEditAnggota(chatId, text, senderName, userId) {
+  if (!isAdmin(userId)) {
+    tolakAdmin(chatId);
+    return;
+  }
+  try {
+    const parts = teksPerintah(text, CMD_EDITANGGOTA).split("#").map((p) => p.trim());
+    const idKK = parts[0] || "";
+    const namaLama = parts[1] || "";
+    if (!idKK || !namaLama || parts.length < 3) {
+      sendTelegramMessage(
+        chatId,
+        "⚠️ *Format Salah!*\nGunakan: `/editanggota id_kk#Nama#kolom=nilai`\n" +
+          "Kolom: `nama`, `hubungan`, `jk`, `lahir`, `status`, `catatan`\n" +
+          "Contoh: `/editanggota KK-001#Budi#jk=L#lahir=1990-01-01`"
+      );
+      return;
+    }
+    const peta = {
+      nama: "nama",
+      hubungan: "hubungan",
+      jk: "jenis_kelamin",
+      jenis_kelamin: "jenis_kelamin",
+      lahir: "tanggal_lahir",
+      tanggal_lahir: "tanggal_lahir",
+      status: "status",
+      catatan: "catatan",
+    };
+    const perubahan = {};
+    parts.slice(2).forEach((seg) => {
+      const idx = seg.indexOf("=");
+      if (idx <= 0) {
+        throw new Error("Format perubahan harus kolom=nilai: '" + seg + "'.");
+      }
+      const kunci = seg.slice(0, idx).trim().toLowerCase();
+      const nilai = seg.slice(idx + 1).trim();
+      const kolom = peta[kunci];
+      if (!kolom) {
+        throw new Error(
+          "Kolom '" + kunci + "' tidak dikenal. Gunakan: nama, hubungan, jk, lahir, status, catatan."
+        );
+      }
+      perubahan[kolom] = nilai;
+    });
+    const hasil = ubahAnggota(idKK, namaLama, perubahan);
+    const urut = ["nama", "hubungan", "jenis_kelamin", "tanggal_lahir", "status", "catatan"];
+    const baris = urut
+      .filter((k) => Object.prototype.hasOwnProperty.call(hasil.perubahan, k))
+      .map((k) => {
+        const lama = str(hasil.sebelum[k]) || "-";
+        const baru = str(hasil.sesudah[k]) || "-";
+        return "• " + k + ": " + escMd(lama) + " → *" + escMd(baru) + "*";
+      });
+    sendTelegramMessage(
+      chatId,
+      "✅ *Anggota diperbarui*\n\n" +
+        "🆔 KK: " + hasil.id_kk + " (" + escMd(hasil.nama_kk) + ")\n" +
+        "👤 " + escMd(hasil.sesudah.nama) + " — " + escMd(hasil.sesudah.hubungan) + "\n\n" +
+        baris.join("\n")
     );
   } catch (e) {
     balasError(chatId, e);
@@ -3723,6 +3886,7 @@ if (typeof module !== "undefined" && module.exports) {
     CMD_TAMBAHWARGA,
     CMD_TAMBAHKK,
     CMD_TAMBAHANGGOTA,
+    CMD_EDITANGGOTA,
     CMD_ADMIN,
     CMD_PENGUMUMAN,
     CMD_BUATPENGUMUMAN,
@@ -3799,6 +3963,7 @@ if (typeof module !== "undefined" && module.exports) {
     cariKeluarga,
     tambahKeluarga,
     tambahAnggota,
+    ubahAnggota,
     normalizeJK,
     getTelegramUserRows,
     cariTelegramUser,
@@ -3864,6 +4029,7 @@ if (typeof module !== "undefined" && module.exports) {
     handleTambahWarga,
     handleTambahKK,
     handleTambahAnggota,
+    handleEditAnggota,
     handlePengumuman,
     handleBuatPengumuman,
     handleSetting,
