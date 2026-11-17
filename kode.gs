@@ -161,7 +161,8 @@ function setWebhook(dropPending) {
 // 2. Fungsi utama yang menerima pesan masuk dari Telegram (Metode POST)
 function doGet(e) {
     // Health check sederhana untuk uji URL webhook via browser
-    return ContentService.createTextOutput("OK");
+    // dengan htmloutput tidak ada redirection
+    return HtmlService.createHtmlOutput("OK");
 }
 
 function doPost(e) {
@@ -197,13 +198,11 @@ function doPost(e) {
         }
 
         Logger.log("doPost end update_id=" + updateId + " ms=" + (new Date().getTime() - startTime));
-        return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
-            .setMimeType(ContentService.MimeType.JSON);
+        return HtmlService.createHtmlOutput("OK");
 
     } catch (error) {
         Logger.log("doPost error: " + error.toString() + " ms=" + (new Date().getTime() - startTime));
-        return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
-            .setMimeType(ContentService.MimeType.JSON);
+        return HtmlService.createHtmlOutput("Error" + error.toString());
     }
 }
 
