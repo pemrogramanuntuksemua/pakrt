@@ -15,7 +15,7 @@ Isi konstanta di bagian atas `kode.gs`:
 - `SPREADSHEET_ID` — ID Google Spreadsheet
 - `TELEGRAM_TOKEN` — token bot Telegram
 - `WEBHOOK_URL` — URL deploy Web App (diisi setelah deploy)
-- `ADMIN_IDS` — array ID Telegram pengurus yang boleh mengubah data
+- `ADMIN_IDS` — array ID Telegram pengurus inti (hardcoded). Admin tambahan dikelola lewat `/admin` dan disimpan pada setting `admin_tambahan`.
 - `GROUP_CHAT_ID` (opsional) — ID grup warga untuk auto-broadcast pengumuman
 
 ## Struktur Google Sheet
@@ -61,6 +61,7 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 | `backfill_mulai` | `2026-01` | Periode awal backfill tagihan |
 | `maks_telegram_per_kk` | `2` | Maks akun Telegram (menunggu + aktif) per KK; `0` = tanpa batas |
 | `maks_kk_per_telegram` | `5` | Maks KK aktif per akun Telegram; `0` = tanpa batas |
+| `admin_tambahan` | _(kosong)_ | ID Telegram admin tambahan, dipisah koma. Ubah lewat `/admin`, bukan `/set` |
 
 ## Inisialisasi & reset
 
@@ -107,7 +108,7 @@ Jalankan berurutan dari editor:
 | `/kas <YYYY-MM>` | Saldo akhir bulan tertentu | `/kas 2026-03` |
 | `/alokasi` | Pembagian iuran ke kantong | `/alokasi` |
 | `/warga` | Jumlah KK aktif & jiwa | `/warga` |
-| `/warga <id_kk/no_rumah/nama>` | Detail KK + anggota (detail penuh hanya untuk pengurus atau akun yang terhubung) | `/warga KK-001` |
+| `/warga <id_kk/no_rumah/nama>` | Kartu KK; detail penuh pengurus via DM, akun terhubung melihat nama anggota via DM | `/warga KK-001` |
 | `/gabung <id_kk/no_rumah/nama>` | Ajukan keterkaitan akun Telegram ke KK (hanya lewat DM) | `/gabung KK-001` |
 | `/saya` | Cek KK & status keterkaitan akun ini (hanya lewat DM) | `/saya` |
 | `/tagihan` | Tagihan KK yang terhubung (hanya lewat DM) | `/tagihan` |
@@ -137,13 +138,16 @@ Jalankan berurutan dari editor:
 | `/pindahkas asal#tujuan#nominal#keterangan` | Pindah dana antar kantong | `/pindahkas kasrt#dkmt#10000#Surplus` |
 | `/tutupbuku <YYYY-MM\|YYYY>` | Tutup buku bulanan/tahunan | `/tutupbuku 2026-03` |
 | `/buatpengumuman Kategori#Isi pesan` | Simpan & broadcast pengumuman | `/buatpengumuman Info#Kerja bakti Minggu` |
-| `/admin` | Placeholder (belum aktif) | `/admin` |
+| `/admin` | Daftar admin inti & tambahan | `/admin` |
+| `/admin tambah <id_telegram>` | Tambah admin tambahan (khusus admin inti) | `/admin tambah 123456789` |
+| `/admin hapus <id_telegram>` | Hapus admin tambahan (khusus admin inti) | `/admin hapus 123456789` |
 
 Catatan:
 
 - `/tambahwarga` sudah **diganti** (bukan alias) dan akan mengarahkan ke `/tambahkk` + `/tambahanggota`.
 - Format lama `/tambahkas masuk#50000#Keterangan` akan ditolak dengan pesan perubahan format karena kantong wajib disebut.
 - Periode yang sudah ditutup bersifat read-only: `/bayar`, `/tambahkas`, `/pindahkas`, dan perubahan tarif ditolak. `/rekap` menandai periode tertutup dengan 🔒.
+- Admin tambahan punya akses perintah pengurus yang sama, tetapi hanya admin inti (`ADMIN_IDS`) yang bisa menambah/menghapusnya. `/set admin_tambahan` sengaja ditolak dan diarahkan ke `/admin`.
 
 ## Keterkaitan akun Telegram ↔ KK
 
@@ -152,7 +156,7 @@ Tidak ada SMS gateway. Verifikasi akun dilakukan manual oleh pengurus lewat Tele
 ### Alur pendaftaran
 
 1. Warga mengirim `/gabung <id_kk>` **lewat DM bot** (contoh: `/gabung KK-001`). Bisa juga memakai `no_rumah` atau `nama_kk`.
-2. Sistem menulis baris `TelegramUser` berstatus `menunggu` lalu mengirim DM berisi identitas pemohon ke **setiap** ID di `ADMIN_IDS`. Kegagalan kirim notifikasi hanya dicatat di log, tidak membatalkan pengajuan.
+2. Sistem menulis baris `TelegramUser` berstatus `menunggu` lalu mengirim DM berisi identitas pemohon ke **semua admin** (`ADMIN_IDS` + admin tambahan). Kegagalan kirim notifikasi hanya dicatat di log, tidak membatalkan pengajuan.
 3. Pengurus menjalankan `/verifikasi <id_kk>` (atau `/verifikasi <id_telegram>`) untuk menyetujui, atau `/tolak <...>` untuk menolak. Pemohon menerima DM hasilnya.
 4. Setelah `aktif`, warga bisa memakai `/saya`, `/tagihan`, dan `/tunggakan`.
 
@@ -171,7 +175,7 @@ Tidak ada SMS gateway. Verifikasi akun dilakukan manual oleh pengurus lewat Tele
 
 - `/gabung`, `/saya`, `/tagihan`, dan `/tunggakan` untuk warga **hanya berjalan di DM**. Di grup, bot hanya membalas arahan untuk mengirim lewat DM.
 - Pesan grup tidak pernah memuat `id_telegram` atau `no_hp`.
-- `/warga <id_kk>` menampilkan detail penuh (No HP, alamat, anggota) hanya untuk pengurus atau akun yang terhubung ke KK itu. Akun lain hanya melihat kartu ringkas (no rumah, status, jumlah anggota) beserta arahan `/gabung`.
+- `/warga <id_kk>` menampilkan detail penuh (No HP, alamat, mulai iuran, tunggakan, anggota) **hanya untuk pengurus dan hanya lewat DM**. Akun terhubung non-admin mendapat kartu ringkas + nama anggota aktif, juga hanya di DM. Di grup, semua pengguna hanya melihat kartu ringkas tanpa nama; akun belum terhubung mendapat arahan `/gabung`.
 - Perilaku pengurus tidak berubah: `/tagihan` dan `/tunggakan` tanpa argumen tetap menampilkan data semua KK.
 
 ## Menjalankan unit test

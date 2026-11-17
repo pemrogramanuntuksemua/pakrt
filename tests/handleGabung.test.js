@@ -53,6 +53,19 @@ describe("handleGabung", () => {
     expect(rows[0].id_telegram).toBe("77");
   });
 
+  test("notifikasi pengajuan juga dikirim ke admin tambahan", () => {
+    pakrt.setAdminIds([]);
+    setup({
+      Setting: buatSheet("Setting", [
+        { kunci: "admin_tambahan", nilai: "55", tipe: "teks", keterangan: "" },
+      ]),
+    });
+    pakrt.handleGabung(77, "/gabung KK-001", "Budi", 77, "budi");
+    const teks = semuaTeks();
+    expect(teks[0]).toContain("Pengajuan terkirim");
+    expect(teks.filter((t) => t.indexOf("Pengajuan Keterkaitan") >= 0).length).toBe(1);
+  });
+
   test("pengajuan kedua tidak menambah baris & tidak DM ulang", () => {
     admin();
     pakrt.setAdminIds([9]);

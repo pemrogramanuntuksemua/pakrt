@@ -16,5 +16,6 @@ describe("handleStart", () => {
     expect(payload.text).toContain("/kas");
     expect(payload.text).toContain("/pengumuman");
     expect(payload.text).toContain("/tambahkas");
+    expect(payload.text).toContain("/admin");
   });
 });

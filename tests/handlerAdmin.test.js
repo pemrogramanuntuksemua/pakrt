@@ -52,6 +52,15 @@ describe("handler pengaturan", () => {
     expect(text).toContain("PENGATURAN PAKRT");
     expect(text).toContain("iuran_bulanan");
     expect(text).toContain("jatuh_tempo_hari");
+    expect(text).toContain("admin_tambahan");
+  });
+
+  test("/set admin_tambahan ditolak dan diarahkan ke /admin", () => {
+    admin();
+    setup();
+    pakrt.handleSet(1, "/set admin_tambahan 99", "X", 1);
+    expect(teksTerakhir()).toContain("/admin tambah");
+    expect(pakrt.getAdminTambahan()).toEqual([]);
   });
 
   test("/set non-admin ditolak", () => {
