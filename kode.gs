@@ -1833,38 +1833,39 @@ function tolakAdmin(chatId) {
 
 function handleStart(chatId, text, senderName, userId) {
   const replyText =
-    "Halo, *" + escMd(senderName) + "*! Selamat datang di bot layanan warga **Pakrt** 🏠.\n\n" +
+    "Halo, *" + escMd(senderName) + "*! Selamat datang di bot layanan warga *Pakrt* 🏠.\n\n" +
     "Silakan gunakan perintah berikut:\n" +
-    "/kas - Saldo kas total & per kantong\n" +
-    "/kas <kode> - Mutasi satu kantong (contoh /kas kasrt)\n" +
-    "/alokasi - Pembagian iuran ke kantong\n" +
-    "/warga - Jumlah KK & jiwa\n" +
-    "/warga <id_kk/no_rumah/nama> - Detail KK & anggota\n" +
-    "/gabung <id_kk> - Ajukan keterkaitan akun Telegram ke KK (lewat DM)\n" +
-    "/saya - Cek KK yang terhubung dengan akun ini\n" +
-    "/tagihan - Tagihan KK Anda (setelah terhubung)\n" +
-    "/tunggakan - Tunggakan KK Anda (setelah terhubung)\n" +
-    "/pengumuman - Lihat pengumuman warga terbaru\n\n" +
+    "`/kas` - Saldo kas total & per kantong\n" +
+    "`/kas <kode>` - Mutasi satu kantong (contoh `/kas kasrt`)\n" +
+    "`/kas <YYYY-MM>` - Saldo akhir bulan tertentu\n" +
+    "`/alokasi` - Pembagian iuran ke kantong\n" +
+    "`/warga` - Jumlah KK & jiwa\n" +
+    "`/warga <id_kk/no_rumah/nama>` - Kartu KK & anggota\n" +
+    "`/gabung <id_kk>` - Ajukan keterkaitan akun Telegram ke KK (lewat DM)\n" +
+    "`/saya` - Cek KK yang terhubung dengan akun ini\n" +
+    "`/tagihan` - Tagihan KK Anda (setelah terhubung)\n" +
+    "`/tunggakan` - Tunggakan KK Anda (setelah terhubung)\n" +
+    "`/pengumuman` - Lihat pengumuman warga terbaru\n\n" +
     "_Perintah Pengurus:_\n" +
-    "/setting - Daftar pengaturan\n" +
-    "/set <kunci> <nilai> [periode] - Ubah pengaturan\n" +
-    "/tarif - Riwayat tarif iuran\n" +
-    "/tambahkk Nama#No HP#No Rumah#Alamat#Catatan\n" +
-    "/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD\n" +
-    "/tagihan <id_kk/no_rumah/nama> - Rincian tagihan\n" +
-    "/bayar <id_kk/no_rumah/nama> <periode...> - Catat iuran\n" +
-    "/tunggakan - Ringkasan tunggakan\n" +
-    "/rekap [periode] - Target vs terbayar\n" +
-    "/daftar [semua] - Daftar KK & tunggakan\n" +
-    "/tambahkas jenis#alokasi#nominal#keterangan\n" +
-    "/pindahkas asal#tujuan#nominal#keterangan\n" +
-    "/tutupbuku <YYYY-MM|YYYY> - Tutup buku\n" +
-    "/verifikasi <id_kk|id_telegram> - Setujui pengajuan akun\n" +
-    "/tolak <id_kk|id_telegram> - Tolak pengajuan akun\n" +
-    "/cabut <id_kk|id_telegram> - Putuskan akun dari KK\n" +
-    "/admin [tambah|hapus] <id_telegram> - Kelola admin tambahan\n" +
-    "/buatpengumuman Kategori#Isi pesan\n\n" +
-    "_Catatan:_ iuran hanya dicatat lewat /bayar. Pengeluaran wajib menyebut kantong.";
+    "`/setting` - Daftar pengaturan\n" +
+    "`/set <kunci> <nilai> [periode]` - Ubah pengaturan\n" +
+    "`/tarif` - Riwayat tarif iuran\n" +
+    "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
+    "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`\n" +
+    "`/tagihan <id_kk/no_rumah/nama>` - Rincian tagihan\n" +
+    "`/bayar <id_kk/no_rumah/nama> <periode...>` - Catat iuran\n" +
+    "`/tunggakan` - Ringkasan tunggakan\n" +
+    "`/rekap [periode]` - Target vs terbayar\n" +
+    "`/daftar [semua]` - Daftar KK & tunggakan\n" +
+    "`/tambahkas jenis#alokasi#nominal#keterangan`\n" +
+    "`/pindahkas asal#tujuan#nominal#keterangan`\n" +
+    "`/tutupbuku <YYYY-MM|YYYY>` - Tutup buku\n" +
+    "`/verifikasi <id_kk|id_telegram>` - Setujui pengajuan akun\n" +
+    "`/tolak <id_kk|id_telegram>` - Tolak pengajuan akun\n" +
+    "`/cabut <id_kk|id_telegram>` - Putuskan akun dari KK\n" +
+    "`/admin [tambah|hapus] <id_telegram>` - Kelola admin tambahan\n" +
+    "`/buatpengumuman Kategori#Isi pesan`\n\n" +
+    "_Catatan:_ iuran hanya dicatat lewat `/bayar`. Pengeluaran wajib menyebut kantong.";
   sendTelegramMessage(chatId, replyText);
 }
 
@@ -3281,7 +3282,26 @@ function sendTelegramMessage(chatId, text) {
       const res = UrlFetchApp.fetch(url, options);
       Logger.log(res.getContentText());
     } catch (error) {
-      Logger.log("Error: " + error.toString());
+      const pesan = error && error.toString ? error.toString() : String(error);
+      const salahFormat = /(400|bad request|can't parse entities|can't find end of the entity)/i.test(pesan);
+      if (!salahFormat) {
+        Logger.log("Error: " + pesan);
+        return;
+      }
+      Logger.log("Markdown gagal, kirim ulang sebagai teks biasa: " + pesan);
+      try {
+        const fallback = { chat_id: chatId, text: teks };
+        const res = UrlFetchApp.fetch(url, {
+          method: "post",
+          contentType: "application/json",
+          payload: JSON.stringify(fallback),
+        });
+        Logger.log(res.getContentText());
+      } catch (err2) {
+        Logger.log(
+          "Fallback gagal: " + (err2 && err2.toString ? err2.toString() : String(err2))
+        );
+      }
     }
   });
 }

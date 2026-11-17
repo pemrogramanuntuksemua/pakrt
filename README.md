@@ -191,6 +191,12 @@ Test berada di folder `tests/` dan menggunakan Jest dengan mock global Google Ap
 
 ## Troubleshooting
 
+### Perintah tidak dibalas sama sekali
+
+1. Cek Apps Script → Executions/Logs untuk pesan `Error: ... returned code 400 ... can't parse entities`.
+2. Bot otomatis mengirim ulang pesan sebagai teks biasa bila Markdown gagal, tetapi log tetap mencatat error aslinya untuk perbaikan format.
+3. Pastikan perintah dikirim tanpa suffix `@namabot`; bentuk `/perintah@namabot` belum dinormalisasi.
+
 ### Bot membalas lebih dari 1x / pending_update_count tidak turun
 
 1. Cek `getWebhookInfo` (pending_update_count, last_error_message).
