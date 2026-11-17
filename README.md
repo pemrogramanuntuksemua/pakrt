@@ -52,5 +52,17 @@ npm run test:coverage
 ```
 
 Test berada di folder `tests/` dan menggunakan Jest dengan mock global Google Apps Script.
+
+## Troubleshooting
+
+### Bot membalas lebih dari 1x / pending_update_count tidak turun
+
+1. Cek `getWebhookInfo` (pending_update_count, last_error_message).
+2. Cek Apps Script → Executions (error/timeout).
+3. Bersihkan pending updates:
+   - Jalankan `setWebhook(true)` di Apps Script (mendaftarkan webhook + drop pending).
+   - Atau panggil URL: `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<WEBHOOK_URL>&drop_pending_updates=true`
+   - Alternatif: `deleteWebhook(true)` lalu `setWebhook()`.
+4. Pastikan pakai URL Web App `/exec` (bukan `/dev`) dan `doPost` mengembalikan 200 OK.
 EOF
 echo done

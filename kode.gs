@@ -129,23 +129,38 @@ function getWebhookInfo() {
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getWebhookInfo`;
     const response = UrlFetchApp.fetch(url);
     Logger.log(response.getContentText());
+    return response.getContentText();
+}
+
+function deleteWebhook(dropPending) {
+    const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=${dropPending ? "true" : "false"}`;
+    const response = UrlFetchApp.fetch(url);
+    Logger.log(response.getContentText());
+    return response.getContentText();
 }
 
 // 1. Fungsi untuk mendaftarkan Webhook Telegram secara otomatis
-function setWebhook() {
-    const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook?url=${WEBHOOK_URL}&drop_pending_updates=true`;
+function setWebhook(dropPending) {
+    let url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook?url=${WEBHOOK_URL}`;
+    if (dropPending !== false) {
+        url += `&drop_pending_updates=true`;
+    }
     const response = UrlFetchApp.fetch(url);
     Logger.log(response.getContentText());
+    return response.getContentText();
 }
 
 // 2. Fungsi utama yang menerima pesan masuk dari Telegram (Metode POST)
 function doPost(e) {
+    const startTime = new Date().getTime();
     try {
         const data = JSON.parse(e.postData.contents);
 
         const updateId = data && data.update_id;
+        Logger.log("doPost start update_id=" + updateId);
+
         if (isProcessed(updateId)) {
-            Logger.log("Duplicate update ignored: " + updateId);
+            Logger.log("Duplicate update ignored: " + updateId + " ms=" + (new Date().getTime() - startTime));
             return ContentService.createTextOutput(JSON.stringify({ status: "success", duplicate: true }))
                 .setMimeType(ContentService.MimeType.JSON);
         }
@@ -161,11 +176,12 @@ function doPost(e) {
             handleCommand(chatId, text, senderName, userId);
         }
 
+        Logger.log("doPost end update_id=" + updateId + " ms=" + (new Date().getTime() - startTime));
         return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
             .setMimeType(ContentService.MimeType.JSON);
 
     } catch (error) {
-        Logger.log("Error: " + error.toString());
+        Logger.log("doPost error: " + error.toString() + " ms=" + (new Date().getTime() - startTime));
         return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
             .setMimeType(ContentService.MimeType.JSON);
     }
@@ -178,7 +194,7 @@ function handleStart(chatId, text, senderName, userId) {
         "/pengumuman - Lihat pengumuman warga terbaru\n" +
         "/warga - Cek jumlah warga terdaftar\n\n" +
         "_Perintah Pengurus:_\n" +
-        "/tambahkas [masuk/keluar] [nominal] [keterangan]\`\n" +
+        "/tambahkas [masuk/keluar] [nominal] [keterangan]\n" +
         "/buatpengumuman [Kategori] [Isi pesan]";
 
     sendTelegramMessage(chatId, replyText);
@@ -442,6 +458,8 @@ if (typeof module !== "undefined" && module.exports) {
         getProcessedUpdateIds,
         isProcessed,
         markProcessed,
+        deleteWebhook,
+        setWebhook,
         getSpreadsheet,
         handleStart,
         handleKas,
