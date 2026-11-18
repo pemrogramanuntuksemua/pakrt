@@ -10,7 +10,7 @@ function handleAdmin(chatId, text, senderName, userId) {
     const inti = ADMIN_IDS.map((id) => str(id)).filter(Boolean);
     if (!aksi) {
       const tambahan = getAdminTambahan();
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "👮 *ADMIN PAKRT*\n\n" +
           "*Inti (kode):*\n" +
@@ -24,7 +24,7 @@ function handleAdmin(chatId, text, senderName, userId) {
       return;
     }
     if (aksi !== "tambah" && aksi !== "hapus") {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ Gunakan:\n`/admin`\n`/admin tambah <id_telegram>`\n`/admin hapus <id_telegram>`"
       );
@@ -60,7 +60,7 @@ function handleAdmin(chatId, text, senderName, userId) {
         simpanAdminTambahan(tambahan);
         ditambah.forEach((id) => {
           try {
-            sendTelegramMessage(
+            sendAdminMessage(
               id,
               "✅ Anda ditambahkan sebagai admin Pakrt oleh " + str(senderName || "pengurus") + "."
             );
@@ -68,8 +68,8 @@ function handleAdmin(chatId, text, senderName, userId) {
             Logger.log("Gagal kirim DM ke admin baru " + id + ": " + e.toString());
           }
         });
-        sendTelegramMessage(
-          chatId,
+        sendAdminMessage(
+        chatId,
           "✅ *Admin ditambahkan*\n\n" +
             ditambah.map((id) => "• `" + id + "`").join("\n") +
             "\n\nTotal admin tambahan: *" + tambahan.length + "*" +
@@ -77,8 +77,8 @@ function handleAdmin(chatId, text, senderName, userId) {
             (sudahAda.length ? "\n\nSudah terdaftar: " + sudahAda.join(", ") : "")
         );
       } else {
-        sendTelegramMessage(
-          chatId,
+        sendAdminMessage(
+        chatId,
           "ℹ️ Tidak ada admin baru." +
             (sudahInti.length ? "\n\nSudah admin inti: " + sudahInti.join(", ") : "") +
             (sudahAda.length ? "\n\nSudah terdaftar: " + sudahAda.join(", ") : "")
@@ -92,7 +92,7 @@ function handleAdmin(chatId, text, senderName, userId) {
     const asing = daftarId.filter((id) => inti.indexOf(id) < 0 && tambahan.indexOf(id) < 0);
     if (dihapus.length) {
       simpanAdminTambahan(sisa);
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "✅ *Admin dihapus*\n\n" +
           dihapus.map((id) => "• `" + id + "`").join("\n") +
@@ -101,7 +101,7 @@ function handleAdmin(chatId, text, senderName, userId) {
           (asing.length ? "\n\nTidak terdaftar: " + asing.join(", ") : "")
       );
     } else {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "ℹ️ Tidak ada admin tambahan yang dihapus." +
           (intiTetap.length ? "\n\nAdmin inti tidak bisa dihapus: " + intiTetap.join(", ") : "") +
@@ -124,7 +124,7 @@ function handleBuatPengumuman(chatId, text, senderName, userId) {
     const kategori = parts[0] || "";
     const isiPesan = parts.slice(1).join("#").trim();
     if (!kategori || !isiPesan) {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ *Format Salah!*\nGunakan: `/buatpengumuman Kategori#Isi Pesan`"
       );
@@ -143,8 +143,8 @@ function handleBuatPengumuman(chatId, text, senderName, userId) {
           "\n\n_Disampaikan oleh Pengurus_"
       );
     }
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Pengumuman Berhasil Disimpan & Disebar!*\n\n🏷️ Kategori: *" + escMd(kategori) + "*\n📝 " + isiPesan
     );
   } catch (e) {
@@ -153,8 +153,8 @@ function handleBuatPengumuman(chatId, text, senderName, userId) {
 }
 
 function handleTambahWarga(chatId, text, senderName, userId) {
-  sendTelegramMessage(
-    chatId,
+  sendAdminMessage(
+        chatId,
     "⚠️ `/tambahwarga` sudah diganti.\n\nGunakan:\n" +
       "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
       "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`"
@@ -174,7 +174,7 @@ function handleTambahKK(chatId, text, senderName, userId) {
     const alamat = parts[3] || "";
     const catatan = parts.slice(4).join("#").trim();
     if (!nama || !noRumah) {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ *Format Salah!*\nGunakan: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`"
       );
@@ -184,8 +184,8 @@ function handleTambahKK(chatId, text, senderName, userId) {
       { nama_kk: nama, no_hp: noHp, no_rumah: noRumah, alamat: alamat, catatan: catatan },
       senderName
     );
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *KK Berhasil Ditambahkan!*\n\n" +
         "🆔 ID: *" + kk.id_kk + "*\n" +
         "👤 Kepala Keluarga: *" + escMd(kk.nama_kk) + "*\n" +
@@ -215,7 +215,7 @@ function handleTambahAnggota(chatId, text, senderName, userId) {
     const lahir = parts[4] || "";
     const catatan = parts.slice(5).join("#").trim();
     if (!idKK || !nama) {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ *Format Salah!*\nGunakan: `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`"
       );
@@ -229,8 +229,8 @@ function handleTambahAnggota(chatId, text, senderName, userId) {
       tanggal_lahir: lahir,
       catatan: catatan,
     });
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Anggota Berhasil Ditambahkan!*\n\n" +
         "👤 " + escMd(nama) + "\n" +
         "🆔 KK: " + kk.id_kk + " (" + escMd(kk.nama_kk) + ")\n" +
@@ -252,7 +252,7 @@ function handleEditAnggota(chatId, text, senderName, userId) {
     const idKK = parts[0] || "";
     const namaLama = parts[1] || "";
     if (!idKK || !namaLama || parts.length < 3) {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ *Format Salah!*\nGunakan: `/editanggota id_kk#Nama#kolom=nilai`\n" +
           "Kolom: `nama`, `hubungan`, `jk`, `lahir`, `status`, `catatan`\n" +
@@ -295,8 +295,8 @@ function handleEditAnggota(chatId, text, senderName, userId) {
         const baru = str(hasil.sesudah[k]) || "-";
         return "• " + k + ": " + escMd(lama) + " → *" + escMd(baru) + "*";
       });
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Anggota diperbarui*\n\n" +
         "🆔 KK: " + hasil.id_kk + " (" + escMd(hasil.nama_kk) + ")\n" +
         "👤 " + escMd(hasil.sesudah.nama) + " — " + escMd(hasil.sesudah.hubungan) + "\n\n" +
@@ -331,8 +331,8 @@ function handleBayar(chatId, text, senderName, userId) {
       (kode) => "• " + padKanan(kode, 8) + padKiri(fmtRp(totalKantong[kode]), 12)
     );
     const tarif = hasil.detail.map((d) => fmtRp(d.nominal)).join(" / ");
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Pembayaran iuran dicatat*\n\n" +
         "👤 " + escMd(kk.nama_kk) + " (" + kk.id_kk + " / " + escMd(kk.no_rumah) + ")\n" +
         "📅 Periode: " + hasil.periode.join(", ") + "\n" +
@@ -358,8 +358,8 @@ function handleVerifikasi(chatId, text, senderName, userId) {
     }
     const t = verifikasiKeterkaitan(arg, senderName);
     const kk = t.keluarga || {};
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Pengajuan disetujui*\n\n" +
         "👤 " + escMd(t.nama || "-") +
         (t.username ? " (@" + escMd(t.username) + ")" : "") + "\n" +
@@ -389,8 +389,8 @@ function handleTolak(chatId, text, senderName, userId) {
     }
     const t = tolakKeterkaitan(arg, senderName);
     const kk = t.keluarga || {};
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "❌ *Pengajuan ditolak*\n\n" +
         "🆔 id_telegram: `" + t.id_telegram + "`\n" +
         "🏠 KK: *" + kk.id_kk + "* · " + escMd(kk.nama_kk)
@@ -416,8 +416,8 @@ function handleCabut(chatId, text, senderName, userId) {
       return;
     }
     const rows = cabutKeterkaitan(arg, senderName);
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "⛔ *Keterkaitan dicabut*\n\n" +
         "Jumlah akun: *" + rows.length + "*\n" +
         rows.map((t) => "• `" + t.id_telegram + "` → " + t.id_kk).join("\n")
@@ -467,8 +467,8 @@ function handleRekap(chatId, text, senderName, userId) {
       }
     }
     const rekap = hitungRekapRentang(dari, sampai);
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       dari === sampai ? formatRekapBulanan(rekap.perPeriode[0]) : formatRekapRentang(rekap)
     );
   } catch (e) {
@@ -502,8 +502,8 @@ function handleDaftar(chatId, text, senderName, userId) {
       sendAdminMessage(chatId, "ℹ️ Belum ada KK terdaftar. Tambah lewat `/tambahkk`.");
       return;
     }
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       formatDaftarKK(rows, {
         sampai: periodeSekarang(),
         totalKK: semuaKK.length,
@@ -527,8 +527,8 @@ function handleSetting(chatId, text, senderName, userId) {
   const baris = Object.keys(DEFAULT_SETTINGS).map(
     (k) => "• `" + k + "`: *" + String(nilai[k]) + "*  _(" + DEFAULT_SETTINGS[k].keterangan + ")_"
   );
-  sendTelegramMessage(
-    chatId,
+  sendAdminMessage(
+        chatId,
     "⚙️ *PENGATURAN PAKRT*\n\n" + baris.join("\n") +
       "\n\nUbah dengan `/set <kunci> <nilai>`."
   );
@@ -560,7 +560,7 @@ function handleSet(chatId, text, senderName, userId) {
       const nominal = parseAngka(nilai);
       const hasil = setTarif(p.periode, nominal, "Perubahan via /set oleh " + str(senderName));
       setSetting("iuran_bulanan", nominal);
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "✅ *Tarif diperbarui*\n\n" +
           "📅 Periode: *" + p.periode + "*\n" +
@@ -583,8 +583,8 @@ function handleSet(chatId, text, senderName, userId) {
       def.tipe === "angka" ? parseAngka(nilai) :
       def.tipe === "boolean" ? toBool(nilai) : str(nilai);
     setSetting(kunci, dikonversi);
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Pengaturan disimpan*\n\n• `" + kunci + "`: *" + String(dikonversi) + "*"
     );
   } catch (e) {
@@ -603,8 +603,8 @@ function handleTarif(chatId, text, senderName, userId) {
     (t) => "• " + t.berlaku_mulai + " — *" + fmtRp(t.nominal) + "*" +
       (t.keterangan ? "  _" + t.keterangan + "_" : "")
   );
-  sendTelegramMessage(
-    chatId,
+  sendAdminMessage(
+        chatId,
     "💵 *TARIF IURAN*\n\n" +
       (baris.length ? baris.join("\n") : "• (belum ada histori tarif)") +
       "\n\nBerlaku sekarang: *" + fmtRp(aktif) + "* per KK\n" +
@@ -624,8 +624,8 @@ function handleAlokasi(chatId, text, senderName, userId) {
         (a.sisa ? "  (sisa)" : "")
       );
     });
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "🧩 *ALOKASI IURAN* — " + fmtRp(tarif) + " / KK\n\n" +
         "```\n" + padKanan("kode", 8) + padKanan("kantong", 26) + padKiri("nominal", 12) + "\n" +
         "─".repeat(46) + "\n" + baris.join("\n") + "\n" +
@@ -648,7 +648,7 @@ function handleTambahKas(chatId, text, senderName, userId) {
     const jenis = (parts[0] || "").toLowerCase();
     const kodeDikenal = getAlokasiAktif().some((a) => a.kode === (parts[1] || "").toLowerCase());
     if (parts.length >= 2 && !kodeDikenal && parseAngka(parts[1]) > 0) {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ *Format /tambahkas berubah.*\n\n" +
           "Sekarang wajib menyebut kantong:\n" +
@@ -662,7 +662,7 @@ function handleTambahKas(chatId, text, senderName, userId) {
     const nominal = parseAngka(parts[2]);
     const keterangan = parts.slice(3).join("#").trim() || "Tanpa Keterangan";
     if ((jenis !== JENIS_MASUK && jenis !== JENIS_KELUAR) || !alokasi || !isFinite(nominal) || nominal <= 0) {
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "⚠️ *Format Salah!*\nGunakan: `/tambahkas jenis#alokasi#nominal#keterangan`\n" +
           "Contoh: `/tambahkas keluar#kamsih#400000#Honor satpam`"
@@ -670,8 +670,8 @@ function handleTambahKas(chatId, text, senderName, userId) {
       return;
     }
     const hasil = tambahKasManual(jenis, alokasi, nominal, keterangan, senderName);
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Kas Berhasil Dicatat!*\n\n" +
         "📌 Jenis: *" + hasil.jenis.toUpperCase() + "*\n" +
         "👛 Kantong: *" + hasil.alokasi + "*\n" +
@@ -699,8 +699,8 @@ function handlePindahKas(chatId, text, senderName, userId) {
       throw new Error("Gunakan: /pindahkas asal#tujuan#nominal#keterangan");
     }
     const hasil = pindahKas(asal, tujuan, nominal, keterangan, senderName);
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "✅ *Dana berhasil dipindahkan*\n\n" +
         "Dari  : " + hasil.dari + "\n" +
         "Ke    : " + hasil.ke + "\n" +
@@ -723,7 +723,7 @@ function handleTutupBuku(chatId, text, senderName, userId) {
     const hasil = tutupBuku(arg, senderName);
     if (hasil.jenis === "bulan") {
       const r = hasil.rekap;
-      sendTelegramMessage(
+      sendAdminMessage(
         chatId,
         "🔒 *TUTUP BUKU " + labelPeriode(hasil.periode).toUpperCase() + "*\n\n" +
           "👥 KK: " + r.totalKK + " · Jiwa: " + r.totalJiwa + "\n" +
@@ -739,8 +739,8 @@ function handleTutupBuku(chatId, text, senderName, userId) {
       );
       return;
     }
-    sendTelegramMessage(
-      chatId,
+    sendAdminMessage(
+        chatId,
       "🔒 *TUTUP BUKU TAHUN " + hasil.periode + "*\n\n" +
         "🎯 Target setahun: " + fmtRp(hasil.rekap.total_tagihan) + "\n" +
         "✅ Terbayar: " + fmtRp(hasil.rekap.total_terbayar) + "\n" +

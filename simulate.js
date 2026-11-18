@@ -70,7 +70,7 @@ if (sampleData.GROUP_CHAT_ID) pakrt.setGroupChatId(sampleData.GROUP_CHAT_ID);
 // Parse CLI args
 const text = process.argv[2] || "/start";
 const chatId = Number(process.argv[3] || 12345);
-const userId = Number(process.argv[4] || 6823308074);
+const userId = Number(process.argv[4] || 777777);
 const name = process.argv[5] || "Bre";
 
 const event = {

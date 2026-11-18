@@ -836,7 +836,7 @@ function notifPengajuanAdmin(hasil, username, nama) {
     "Tolak: `/tolak " + kk.id_kk + "`";
   daftarAdmin.forEach((id) => {
     try {
-      sendTelegramMessage(id, teks);
+      sendAdminMessage(id, teks);
     } catch (e) {
       Logger.log("Gagal kirim notifikasi ke admin " + id + ": " + e.toString());
     }

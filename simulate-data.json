@@ -1,5 +1,5 @@
 {
-  "ADMIN_IDS": ["6823308074"],
+  "ADMIN_IDS": ["777777"],
   "GROUP_CHAT_ID": "",
   "Kas": [
     ["tanggal", "keterangan", "jenis", "nominal", "alokasi", "ref", "dicatat_oleh"],
@@ -10,8 +10,15 @@
     ["id_kk", "no_rumah", "nama_kk", "no_hp", "alamat", "status", "mulai_iuran", "catatan"],
     ["KK001", "12", "Budi", "0812", "Jl. Mawar", "aktif", "2026-01", ""]
   ],
+  "Keluarga": [
+    ["nama_kk", "no_rumah", "no_hp", "alamat",  "catatan"],
+    ["KK001", "12", "0812", "Jl. Mawar", ""]
+  ],
   "Pengumuman": [
     ["timestamp", "kategori", "isi", "pengirim"],
     ["2026-01-02", "Info", "Gotong royong Sabtu", "admin"]
+  ],
+  "TelegramUser": [
+    ["id_telegram", "username", "id_kk", "peran", "status", "diminta_pada", "diverifikasi_oleh", "diverifikasi_pada"]
   ]
 }
