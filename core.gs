@@ -832,8 +832,8 @@ function notifPengajuanAdmin(hasil, username, nama) {
     (username ? " (@" + escMd(username) + ")" : "") + "\n" +
     "🆔 id_telegram: `" + hasil.id_telegram + "`\n" +
     "🏠 KK: *" + kk.id_kk + "* · " + escMd(kk.no_rumah) + " · " + escMd(kk.nama_kk) + "\n\n" +
-    "Setujui: `/verifikasi " + kk.id_kk + "`\n" +
-    "Tolak: `/tolak " + kk.id_kk + "`";
+    "Setujui: " + cmdLink("/verifikasi " + kk.id_kk) + "\n" +
+    "Tolak: " + cmdLink("/tolak " + kk.id_kk);
   daftarAdmin.forEach((id) => {
     try {
       sendAdminMessage(id, teks);
@@ -1775,7 +1775,7 @@ function kirimTagihanKK(chatId, kk) {
       daftar.join("\n") +
       "\n\n⏳ Total tunggakan: *" + fmtRp(tunggakan) + "*\n" +
       (belumPertama
-        ? "Ketik `/bayar " + kk.id_kk + " " + belumPertama.periode + "` untuk mencatat pembayaran."
+        ? "Ketik " + cmdLink("/bayar " + kk.id_kk + " " + belumPertama.periode) + " untuk mencatat pembayaran."
         : "Semua tagihan sudah lunas ✅")
   );
 }
@@ -2041,6 +2041,77 @@ function sendTelegramMessage(chatId, text) {
 function sendAdminMessage(chatId, text) {
   const prefix = "👮 *ADMIN*\n\n";
   return sendTelegramMessage(chatId, prefix + text);
+}
+
+function getScriptCache() {
+  try {
+    return CacheService.getScriptCache();
+  } catch (e) {
+    return null;
+  }
+}
+
+function cacheGet(key) {
+  const c = getScriptCache();
+  if (!c) return null;
+  try {
+    return c.get(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function cachePut(key, value, ttl) {
+  const c = getScriptCache();
+  if (!c) return;
+  try {
+    c.put(key, value, ttl || 60);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function kasCacheVersion() {
+  try {
+    const p = PropertiesService.getScriptProperties();
+    return p.getProperty("KAS_CACHE_VERSION") || "0";
+  } catch (e) {
+    return "0";
+  }
+}
+
+function invalidateKasCache() {
+  try {
+    const p = PropertiesService.getScriptProperties();
+    const v = Number(p.getProperty("KAS_CACHE_VERSION") || "0") + 1;
+    p.setProperty("KAS_CACHE_VERSION", String(v));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function getBotUsername() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const cached = props.getProperty("BOT_USERNAME");
+    if (cached) return cached;
+    const res = UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getMe");
+    const data = JSON.parse(res.getContentText());
+    if (data && data.ok && data.result && data.result.username) {
+      props.setProperty("BOT_USERNAME", data.result.username);
+      return data.result.username;
+    }
+  } catch (e) {
+    Logger.log("getBotUsername error: " + e.toString());
+  }
+  return "";
+}
+
+function cmdLink(teksPerintah) {
+  const u = getBotUsername();
+  if (!u) return "`" + teksPerintah + "`";
+  const url = "https://t.me/" + u + "?text=" + encodeURIComponent(teksPerintah);
+  return "[" + teksPerintah + "](" + url + ")";
 }
 
 function pollTelegram() {
@@ -2545,6 +2616,9 @@ if (typeof module !== "undefined" && module.exports) {
         pecahPesan,
         sendTelegramMessage,
         sendAdminMessage,
+        getBotUsername,
+        getScriptCache, cacheGet, cachePut, kasCacheVersion, invalidateKasCache,
+        cmdLink,
         pollTelegram,
         setupPollingTrigger,
         stopPollingTrigger,

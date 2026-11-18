@@ -19,6 +19,15 @@ global.ScriptApp = {
 };
 global.Logger = { log: (x) => console.log("[LOG]", x) };
 
+const __cacheStore = {};
+global.CacheService = {
+  getScriptCache: () => ({
+    get: (k) => (Object.prototype.hasOwnProperty.call(__cacheStore, k) ? __cacheStore[k] : null),
+    put: (k, v, ttl) => { __cacheStore[k] = v; },
+    remove: (k) => { delete __cacheStore[k]; },
+  }),
+};
+
 // Load sample data
 const dataPath = path.join(__dirname, "simulate-data.json");
 const sampleData = fs.existsSync(dataPath) ? JSON.parse(fs.readFileSync(dataPath, "utf8")) : {};

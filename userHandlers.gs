@@ -370,23 +370,25 @@ function handleKas(chatId, text, senderName, userId) {
       return;
     }
     const arg = teksPerintah(text, CMD_KAS);
+    const cacheKey = "kas:" + kasCacheVersion() + ":" + (arg || "default");
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      sendTelegramMessage(chatId, cached);
+      return;
+    }
     const p = parsePeriode(arg);
+    let replyText = "";
     if (arg && p && p.bulanan) {
       const kas = hitungKasPeriode(p.periode);
       const saldoList = kas.perKantong.map((d) => ({ kode: d.kode, nama: d.nama, saldo: d.saldo_akhir }));
-      sendTelegramMessage(
-        chatId,
-        formatSaldoKas(
-          "KAS RT — " + labelPeriode(p.periode),
-          saldoList,
-          kas.totalSaldoAkhir,
-          kas.totalMasuk,
-          kas.totalKeluar
-        )
+      replyText = formatSaldoKas(
+        "KAS RT — " + labelPeriode(p.periode),
+        saldoList,
+        kas.totalSaldoAkhir,
+        kas.totalMasuk,
+        kas.totalKeluar
       );
-      return;
-    }
-    if (arg) {
+    } else if (arg) {
       const kode = arg.toLowerCase();
       const daftar = getAlokasiAktif();
       const alokasi = daftar.filter((a) => a.kode === kode)[0];
@@ -400,46 +402,36 @@ function handleKas(chatId, text, senderName, userId) {
           (j.jenis === JENIS_KELUAR || j.jenis === JENIS_PINDAH_KELUAR ? "−" : "+") +
           fmtRp(j.nominal) + "  " + escMd(j.keterangan)
       );
-      sendTelegramMessage(
-        chatId,
+      replyText =
         "👛 *" + escMd(alokasi.nama) + "* (`" + kode + "`)\n" +
-          "Saldo: *" + fmtRp(getSaldoKantong(kode)) + "*\n\n" +
-          "*10 mutasi terakhir:*\n" +
-          (baris.length ? baris.join("\n") : "• belum ada mutasi")
-      );
-      return;
+        "Saldo: *" + fmtRp(getSaldoKantong(kode)) + "*\n\n" +
+        "*10 mutasi terakhir:*\n" +
+        (baris.length ? baris.join("\n") : "• belum ada mutasi");
+    } else {
+      const kas = hitungKasPeriode(periodeSekarang());
+      const saldoList = getSaldoSemuaKantong();
+      const total = saldoList.reduce((t, s) => t + s.saldo, 0);
+      replyText =
+        formatSaldoKas(
+          "KAS RT — s.d. " + formatTanggal(new Date()),
+          saldoList,
+          total,
+          kas.totalMasuk,
+          kas.totalKeluar
+        ) + "\n\nKetik `/kas <kode>` untuk mutasi kantong.";
     }
-    const kas = hitungKasPeriode(periodeSekarang());
-    const saldoList = getSaldoSemuaKantong();
-    const total = saldoList.reduce((t, s) => t + s.saldo, 0);
-    sendTelegramMessage(
-      chatId,
-      formatSaldoKas(
-        "KAS RT — s.d. " + formatTanggal(new Date()),
-        saldoList,
-        total,
-        kas.totalMasuk,
-        kas.totalKeluar
-      ) + "\n\nKetik `/kas <kode>` untuk mutasi kantong."
-    );
+    cachePut(cacheKey, replyText, 60);
+    sendTelegramMessage(chatId, replyText);
   } catch (e) {
     balasError(chatId, e);
   }
 }
-
 
 // Node/Jest compatibility
 if (typeof module !== "undefined" && module.exports) {
     const core = (typeof require !== "undefined") ? require("./core.gs") : null;
     if (core) Object.keys(core).forEach((k) => { if (typeof global !== "undefined") global[k] = core[k]; });
     module.exports = {
-        handleGabung,
-        handleKas,
-        handlePengumuman,
-        handleSaya,
-        handleStart,
-        handleTagihan,
-        handleTunggakan,
-        handleWarga,
+        handleStart, handleKas, handleWarga, handlePengumuman, handleGabung, handleSaya, handleTagihan, handleTunggakan,
     };
 }

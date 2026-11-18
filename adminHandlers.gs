@@ -670,6 +670,7 @@ function handleTambahKas(chatId, text, senderName, userId) {
       return;
     }
     const hasil = tambahKasManual(jenis, alokasi, nominal, keterangan, senderName);
+    invalidateKasCache();
     sendAdminMessage(
         chatId,
       "✅ *Kas Berhasil Dicatat!*\n\n" +
@@ -699,6 +700,7 @@ function handlePindahKas(chatId, text, senderName, userId) {
       throw new Error("Gunakan: /pindahkas asal#tujuan#nominal#keterangan");
     }
     const hasil = pindahKas(asal, tujuan, nominal, keterangan, senderName);
+    invalidateKasCache();
     sendAdminMessage(
         chatId,
       "✅ *Dana berhasil dipindahkan*\n\n" +

@@ -8,6 +8,8 @@ function kas(rows) {
 describe("handleKas", () => {
   beforeEach(() => {
     global.UrlFetchApp = { fetch: jest.fn(() => ({ getContentText: () => "" })) };
+    global.__resetCache();
+    global.PropertiesService.getScriptProperties().setProperty("KAS_CACHE_VERSION", "0");
   });
 
   test("tab Kas belum ada -> pesan peringatan", () => {
