@@ -31,12 +31,12 @@ function handleAdmin(chatId, text, senderName, userId) {
       return;
     }
     if (!isAdminInti(userId)) {
-      sendTelegramMessage(chatId, "⛔ Hanya admin inti yang bisa mengubah daftar admin.");
+      sendAdminMessage(chatId, "⛔ Hanya admin inti yang bisa mengubah daftar admin.");
       return;
     }
     const daftarId = parseAdminIds(bagian.slice(1).join(" "));
     if (!daftarId.length) {
-      sendTelegramMessage(chatId, "⚠️ Sebutkan id_telegram. Contoh: `/admin tambah 123456789`");
+      sendAdminMessage(chatId, "⚠️ Sebutkan id_telegram. Contoh: `/admin tambah 123456789`");
       return;
     }
     const tidakValid = daftarId.filter((id) => !/^\d+$/.test(id));
@@ -132,7 +132,7 @@ function handleBuatPengumuman(chatId, text, senderName, userId) {
     }
     const sheet = getSpreadsheet(SHEET_PENGUMUMAN);
     if (!sheet) {
-      sendTelegramMessage(chatId, "⚠️ Tab 'Pengumuman' belum dibuat di Google Sheets.");
+      sendAdminMessage(chatId, "⚠️ Tab 'Pengumuman' belum dibuat di Google Sheets.");
       return;
     }
     sheet.appendRow([new Date(), kategori, isiPesan, senderName]);
@@ -315,7 +315,7 @@ function handleBayar(chatId, text, senderName, userId) {
   try {
     const bagian = teksPerintah(text, CMD_BAYAR).split("#").map((x) => x.trim()).filter(Boolean);
     if (!bagian.length) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/bayar <id_kk/no_rumah/nama> <periode...>`");
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/bayar <id_kk/no_rumah/nama> <periode...>`");
       return;
     }
     const kk = cariKeluarga(bagian[0]);
@@ -353,7 +353,7 @@ function handleVerifikasi(chatId, text, senderName, userId) {
   try {
     const arg = teksPerintah(text, CMD_VERIFIKASI);
     if (!arg) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/verifikasi <id_kk|id_telegram>`");
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/verifikasi <id_kk|id_telegram>`");
       return;
     }
     const t = verifikasiKeterkaitan(arg, senderName);
@@ -384,7 +384,7 @@ function handleTolak(chatId, text, senderName, userId) {
   try {
     const arg = teksPerintah(text, CMD_TOLAK);
     if (!arg) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/tolak <id_kk|id_telegram>`");
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/tolak <id_kk|id_telegram>`");
       return;
     }
     const t = tolakKeterkaitan(arg, senderName);
@@ -412,7 +412,7 @@ function handleCabut(chatId, text, senderName, userId) {
   try {
     const arg = teksPerintah(text, CMD_CABUT);
     if (!arg) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/cabut <id_kk|id_telegram>`");
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/cabut <id_kk|id_telegram>`");
       return;
     }
     const rows = cabutKeterkaitan(arg, senderName);
@@ -499,7 +499,7 @@ function handleDaftar(chatId, text, senderName, userId) {
     const mulai = (page - 1) * perHalaman;
     const rows = semuaKK.slice(mulai, mulai + perHalaman);
     if (!semuaKK.length) {
-      sendTelegramMessage(chatId, "ℹ️ Belum ada KK terdaftar. Tambah lewat `/tambahkk`.");
+      sendAdminMessage(chatId, "ℹ️ Belum ada KK terdaftar. Tambah lewat `/tambahkk`.");
       return;
     }
     sendTelegramMessage(
@@ -543,7 +543,7 @@ function handleSet(chatId, text, senderName, userId) {
     const bagian = teksPerintah(text, CMD_SET).split("#").map((x) => x.trim()).filter(Boolean);
     const kunci = bagian[0] || "";
     if (!kunci) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
       return;
     }
     if (kunci === "admin_tambahan") {
@@ -552,7 +552,7 @@ function handleSet(chatId, text, senderName, userId) {
     if (kunci === "iuran_bulanan") {
       const nilai = bagian[1];
       if (nilai === undefined) {
-        sendTelegramMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
+        sendAdminMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
         return;
       }
       const p = parsePeriode(bagian[2] || periodeSekarang());
@@ -572,7 +572,7 @@ function handleSet(chatId, text, senderName, userId) {
     }
     const nilai = bagian.slice(1).join(" ");
     if (!nilai) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
       return;
     }
     if (!Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, kunci)) {

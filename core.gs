@@ -2038,6 +2038,11 @@ function sendTelegramMessage(chatId, text) {
   });
 }
 
+function sendAdminMessage(chatId, text) {
+  const prefix = "👮 *ADMIN*\n\n";
+  return sendTelegramMessage(chatId, prefix + text);
+}
+
 function pollTelegram() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
@@ -2539,6 +2544,7 @@ if (typeof module !== "undefined" && module.exports) {
         setWebhook,
         pecahPesan,
         sendTelegramMessage,
+        sendAdminMessage,
         pollTelegram,
         setupPollingTrigger,
         stopPollingTrigger,

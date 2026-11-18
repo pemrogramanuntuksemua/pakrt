@@ -186,6 +186,10 @@ Tidak ada SMS gateway. Verifikasi akun dilakukan manual oleh pengurus lewat Tele
 - `adminHandlers.gs` — handler admin: admin, alokasi, bayar, buatpengumuman, cabut, daftar, editanggota, pindahkas, rekap, set, setting, tarif, tambahanggota, tambahkk, tambahkas, tambahwarga, tolak, tutupbuku, verifikasi
 - `main.gs` — konstanta, dispatch, doPost/doGet, polling setup
 
+## Pesan admin
+
+Respons perintah admin diawali label `👮 *ADMIN*` agar mudah dibedakan.
+
 ## Simulasi lokal (tanpa GAS)
 
 Jalankan bot secara lokal (mock Google Sheets & Telegram):
