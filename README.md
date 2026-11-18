@@ -210,6 +210,20 @@ node simulate.js "/tambahkas masuk#kasrt#100000#Donasi" 1 1 "Admin"
 
 Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.json` (termasuk `ADMIN_IDS`).
 
+## Alur Tagihan (End-to-End)
+
+1. Daftar KK: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`
+2. (Opsional) Tambah anggota: `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`
+3. Set tarif: `/set iuran_bulanan <nominal> [periode]` (contoh `/set iuran_bulanan#50000#2026-05`)
+4. Buat tagihan:
+   - Otomatis saat `/bayar`, `/rekap`, atau `/tutupbuku`
+   - Manual massal: jalankan `backfillTagihanBulanan()` di editor, atau `setupSheets({ backfill: true })`
+5. Cek tagihan: `/tagihan <id_kk>` atau `/tunggakan`
+6. Bayar iuran: `/bayar id_kk#periode1#periode2`
+7. Tutup buku: `/tutupbuku YYYY-MM` (mengunci periode)
+
+Catatan: KK harus terdaftar dulu. Tagihan dibuat per KK berdasarkan tarif aktif.
+
 ## Menjalankan unit test
 
 ```bash
