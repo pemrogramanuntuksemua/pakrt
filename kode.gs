@@ -1963,7 +1963,8 @@ function handleStart(chatId, text, senderName, userId) {
     "`/admin [tambah|hapus] <id_telegram>` - Kelola admin tambahan\n" +
     "`/buatpengumuman Kategori#Isi pesan`\n\n" +
     "_Catatan:_ iuran hanya dicatat lewat `/bayar`. Pengeluaran wajib menyebut kantong.";
-  sendTelegramMessage(chatId, replyText);
+  const pesan = replyText.replace(/`/g, "");
+  sendTelegramMessage(chatId, pesan);
 }
 
 function handleWarga(chatId, text, senderName, userId) {
