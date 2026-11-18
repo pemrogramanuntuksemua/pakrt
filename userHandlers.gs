@@ -161,12 +161,20 @@ function handleTagihan(chatId, text, senderName, userId) {
       return;
     }
     const arg = teksPerintah(text, CMD_TAGIHAN);
+    const terhubung = getKkTerhubung(userId);
+    if (!arg && terhubung.length) {
+      if (terhubung.length === 1) {
+        kirimTagihanKK(chatId, cariKeluarga(terhubung[0].id_kk));
+        return;
+      }
+      ringkasanKkTerhubung(chatId, terhubung);
+      return;
+    }
     if (!arg) {
       if (admin) {
         sendTelegramMessage(chatId, "⚠️ Gunakan: `/tagihan <id_kk/no_rumah/nama>`");
         return;
       }
-      const terhubung = getKkTerhubung(userId);
       if (!terhubung.length) {
         sendTelegramMessage(
           chatId,
@@ -175,12 +183,6 @@ function handleTagihan(chatId, text, senderName, userId) {
         );
         return;
       }
-      if (terhubung.length === 1) {
-        kirimTagihanKK(chatId, cariKeluarga(terhubung[0].id_kk));
-        return;
-      }
-      ringkasanKkTerhubung(chatId, terhubung);
-      return;
     }
     const kk = cariKeluarga(arg);
     if (!admin && !isKkTerhubung(userId, kk.id_kk)) {
@@ -204,8 +206,16 @@ function handleTunggakan(chatId, text, senderName, userId) {
       return;
     }
     const arg = teksPerintah(text, CMD_TUNGGAKAN);
+    const terhubung = getKkTerhubung(userId);
+    if (!arg && terhubung.length) {
+      if (terhubung.length === 1) {
+        kirimTunggakanKK(chatId, cariKeluarga(terhubung[0].id_kk));
+        return;
+      }
+      ringkasanKkTerhubung(chatId, terhubung);
+      return;
+    }
     if (!admin) {
-      const terhubung = getKkTerhubung(userId);
       if (!terhubung.length) {
         sendTelegramMessage(
           chatId,
@@ -214,24 +224,18 @@ function handleTunggakan(chatId, text, senderName, userId) {
         );
         return;
       }
-      if (!arg) {
-        if (terhubung.length === 1) {
-          kirimTunggakanKK(chatId, cariKeluarga(terhubung[0].id_kk));
+      if (arg) {
+        const kkSendiri = cariKeluarga(arg);
+        if (!isKkTerhubung(userId, kkSendiri.id_kk)) {
+          sendTelegramMessage(
+            chatId,
+            "⛔ Anda hanya bisa melihat tunggakan KK yang terhubung dengan akun ini."
+          );
           return;
         }
-        ringkasanKkTerhubung(chatId, terhubung);
+        kirimTunggakanKK(chatId, kkSendiri);
         return;
       }
-      const kkSendiri = cariKeluarga(arg);
-      if (!isKkTerhubung(userId, kkSendiri.id_kk)) {
-        sendTelegramMessage(
-          chatId,
-          "⛔ Anda hanya bisa melihat tunggakan KK yang terhubung dengan akun ini."
-        );
-        return;
-      }
-      kirimTunggakanKK(chatId, kkSendiri);
-      return;
     }
     const p = parsePeriode(arg);
     if (arg && !p) {
