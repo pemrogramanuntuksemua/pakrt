@@ -53,6 +53,13 @@ npm run test:coverage
 
 Test berada di folder `tests/` dan menggunakan Jest dengan mock global Google Apps Script.
 
+## Struktur kode
+
+- `core.gs` — infrastruktur bersama (admin, spreadsheet, telegram, idempotency, polling)
+- `userHandlers.gs` — handler user: start, kas, warga, pengumuman
+- `adminHandlers.gs` — handler admin: tambahkas, tambahwarga, buatpengumuman, admin
+- `main.gs` — konstanta, dispatch, doPost/doGet, polling setup
+
 ## Troubleshooting
 
 ### Bot membalas lebih dari 1x / pending_update_count tidak turun

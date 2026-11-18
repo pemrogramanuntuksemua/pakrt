@@ -1,4 +1,4 @@
-const pakrt = require("../kode");
+const pakrt = require("../main");
 const { setSpreadsheet } = require("./helpers/mockSheet");
 
 function resetProps() {

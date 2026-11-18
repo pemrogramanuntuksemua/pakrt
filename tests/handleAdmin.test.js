@@ -1,4 +1,4 @@
-const pakrt = require("../kode");
+const pakrt = require("../main");
 
 describe("handleAdmin", () => {
   let fetchMock;
