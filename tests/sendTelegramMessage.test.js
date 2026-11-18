@@ -1,4 +1,4 @@
-const pakrt = require("../kode");
+const pakrt = require("../main");
 
 function payload(call) {
   return JSON.parse(call[1].payload);

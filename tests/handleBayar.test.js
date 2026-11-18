@@ -35,7 +35,7 @@ describe("handleBayar", () => {
 
   test("non-admin ditolak", () => {
     setup();
-    pakrt.handleBayar(1, "/bayar KK-001 2024-09", "X", 999);
+    pakrt.handleBayar(1, "/bayar KK-001#2024-09", "X", 999);
     expect(teksTerakhir()).toContain("Akses Ditolak");
     expect(baca("Tagihan").every((t) => t.status === "belum")).toBe(true);
   });
@@ -43,7 +43,7 @@ describe("handleBayar", () => {
   test("membayar 2 periode: status lunas + 6 baris kas per kantong", () => {
     admin();
     setup();
-    pakrt.handleBayar(1, "/bayar KK-001 2024-09 2024-10", "Bendahara", 1);
+    pakrt.handleBayar(1, "/bayar KK-001#2024-09#2024-10", "Bendahara", 1);
     const tagihan = baca("Tagihan");
     expect(tagihan.every((t) => t.status === "lunas")).toBe(true);
     expect(tagihan.every((t) => t.dicatat_oleh === "Bendahara")).toBe(true);
@@ -70,8 +70,8 @@ describe("handleBayar", () => {
   test("pembayaran kedua untuk periode sama ditolak", () => {
     admin();
     setup();
-    pakrt.handleBayar(1, "/bayar KK-001 2024-09", "Bendahara", 1);
-    pakrt.handleBayar(1, "/bayar KK-001 2024-09", "Bendahara", 1);
+    pakrt.handleBayar(1, "/bayar KK-001#2024-09", "Bendahara", 1);
+    pakrt.handleBayar(1, "/bayar KK-001#2024-09", "Bendahara", 1);
     expect(teksTerakhir()).toContain("sudah lunas");
     expect(baca("Kas").length).toBe(3);
   });
@@ -79,14 +79,14 @@ describe("handleBayar", () => {
   test("periode masa depan ditolak", () => {
     admin();
     setup();
-    pakrt.handleBayar(1, "/bayar KK-001 2099-01", "Bendahara", 1);
+    pakrt.handleBayar(1, "/bayar KK-001#2099-01", "Bendahara", 1);
     expect(teksTerakhir()).toContain("masa depan");
   });
 
   test("KK tidak billable -> tidak ditagih", () => {
     admin();
     setup();
-    pakrt.handleBayar(1, "/bayar KK-002 2024-09", "Bendahara", 1);
+    pakrt.handleBayar(1, "/bayar KK-002#2024-09", "Bendahara", 1);
     expect(teksTerakhir()).toContain("tidak ditagih");
   });
 

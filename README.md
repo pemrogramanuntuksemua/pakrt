@@ -122,26 +122,25 @@ Jalankan berurutan dari editor:
 | Perintah | Keterangan | Contoh |
 |---|---|---|
 | `/setting` | Daftar pengaturan | `/setting` |
-| `/set <kunci> <nilai> [periode]` | Ubah pengaturan; `iuran_bulanan` menyesuaikan tarif | `/set iuran_bulanan 65000 2026-05` |
+| `/set kunci#nilai#[periode]` | Ubah pengaturan; `iuran_bulanan` menyesuaikan tarif | `/set iuran_bulanan#65000#2026-05` |
 | `/tarif` | Riwayat & tarif berlaku | `/tarif` |
 | `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan` | Tambah KK + kepala keluarga | `/tambahkk Budi#0812#A1#Jl. Mawar#` |
 | `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD#Catatan` | Tambah anggota | `/tambahanggota KK-001#Rina#Istri#P#2010-05-01` |
 | `/editanggota id_kk#Nama#kolom=nilai` | Ubah data anggota (nama, hubungan, jk, lahir, status, catatan) | `/editanggota KK-001#Budi#jk=L#lahir=1990-01-01` |
 | `/tagihan <id_kk/no_rumah/nama>` | Rincian tagihan & tunggakan KK mana pun | `/tagihan KK-001` |
-| `/bayar <id> [YYYY-MM ...]` | Catat iuran (satu-satunya jalur resmi) | `/bayar KK-001 2026-03 2026-04` |
+| `/bayar id#periode1#periode2` | Catat iuran (satu-satunya jalur resmi) | `/bayar KK-001#2026-03#2026-04` |
 | `/tunggakan [id\|YYYY-MM]` | Ringkasan tunggakan (global atau per KK) | `/tunggakan` |
 | `/verifikasi <id_kk\|id_telegram>` | Setujui pengajuan keterkaitan akun | `/verifikasi KK-001` |
 | `/tolak <id_kk\|id_telegram>` | Tolak pengajuan keterkaitan akun | `/tolak 123456789` |
 | `/cabut <id_kk\|id_telegram>` | Putuskan akun dari KK | `/cabut KK-001` |
-| `/rekap [YYYY-MM\|YYYY] [YYYY-MM]` | Target vs terbayar | `/rekap 2026-01 2026-03` |
-| `/daftar [semua\|tagihan\|nama\|rumah] [halaman]` | Daftar KK & tunggakan | `/daftar tagihan` |
+| `/rekap [periode\|periode..periode]` | Target vs terbayar | `/rekap 2026-01..2026-03` |
+| `/daftar [semua#urut#halaman]` | Daftar KK & tunggakan | `/daftar semua#tagihan#2` |
 | `/tambahkas jenis#alokasi#nominal#keterangan` | Kas masuk/keluar manual | `/tambahkas keluar#kamsih#400000#Honor satpam` |
 | `/pindahkas asal#tujuan#nominal#keterangan` | Pindah dana antar kantong | `/pindahkas kasrt#dkmt#10000#Surplus` |
 | `/tutupbuku <YYYY-MM\|YYYY>` | Tutup buku bulanan/tahunan | `/tutupbuku 2026-03` |
 | `/buatpengumuman Kategori#Isi pesan` | Simpan & broadcast pengumuman | `/buatpengumuman Info#Kerja bakti Minggu` |
 | `/admin` | Daftar admin inti & tambahan | `/admin` |
-| `/admin tambah <id_telegram>` | Tambah admin tambahan (khusus admin inti) | `/admin tambah 123456789` |
-| `/admin hapus <id_telegram>` | Hapus admin tambahan (khusus admin inti) | `/admin hapus 123456789` |
+| `/admin aksi#id_telegram` | Tambah/hapus admin tambahan (khusus admin inti) | `/admin tambah#123456789` |
 
 Catatan:
 
@@ -179,6 +178,25 @@ Tidak ada SMS gateway. Verifikasi akun dilakukan manual oleh pengurus lewat Tele
 - Pesan grup tidak pernah memuat `id_telegram` atau `no_hp`.
 - `/warga <id_kk>` menampilkan detail penuh (No HP, alamat, mulai iuran, tunggakan, anggota) **hanya untuk pengurus dan hanya lewat DM**. Akun terhubung non-admin mendapat kartu ringkas + nama anggota aktif, juga hanya di DM. Di grup, semua pengguna hanya melihat kartu ringkas tanpa nama; akun belum terhubung mendapat arahan `/gabung`.
 - Perilaku pengurus tidak berubah: `/tagihan` dan `/tunggakan` tanpa argumen tetap menampilkan data semua KK.
+
+## Struktur kode
+
+- `core.gs` — infrastruktur bersama (spreadsheet, telegram, idempotency, polling, format, tarif, tagihan, tutup buku, alokasi, dll.)
+- `userHandlers.gs` — handler user/mixed: start, kas, warga, pengumuman, gabung, saya, tagihan, tunggakan
+- `adminHandlers.gs` — handler admin: admin, alokasi, bayar, buatpengumuman, cabut, daftar, editanggota, pindahkas, rekap, set, setting, tarif, tambahanggota, tambahkk, tambahkas, tambahwarga, tolak, tutupbuku, verifikasi
+- `main.gs` — konstanta, dispatch, doPost/doGet, polling setup
+
+## Simulasi lokal (tanpa GAS)
+
+Jalankan bot secara lokal (mock Google Sheets & Telegram):
+
+```bash
+node simulate.js "/start"
+node simulate.js "/kas"
+node simulate.js "/tambahkas masuk#kasrt#100000#Donasi" 1 1 "Admin"
+```
+
+Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.json` (termasuk `ADMIN_IDS`).
 
 ## Menjalankan unit test
 

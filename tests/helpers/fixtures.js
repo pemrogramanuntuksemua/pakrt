@@ -1,4 +1,4 @@
-const pakrt = require("../../kode");
+const pakrt = require("../../main");
 const { createMockSheet } = require("./mockSheet");
 
 function buatSheet(nama, objs) {

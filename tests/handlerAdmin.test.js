@@ -58,21 +58,21 @@ describe("handler pengaturan", () => {
   test("/set admin_tambahan ditolak dan diarahkan ke /admin", () => {
     admin();
     setup();
-    pakrt.handleSet(1, "/set admin_tambahan 99", "X", 1);
+    pakrt.handleSet(1, "/set admin_tambahan#99", "X", 1);
     expect(teksTerakhir()).toContain("/admin tambah");
     expect(pakrt.getAdminTambahan()).toEqual([]);
   });
 
   test("/set non-admin ditolak", () => {
     setup();
-    pakrt.handleSet(1, "/set nama_rt RT 009", "X", 999);
+    pakrt.handleSet(1, "/set nama_rt#RT 009", "X", 999);
     expect(teksTerakhir()).toContain("Akses Ditolak");
   });
 
   test("/set menyimpan nilai teks", () => {
     admin();
     setup();
-    pakrt.handleSet(1, "/set nama_rt RT 009", "X", 1);
+    pakrt.handleSet(1, "/set nama_rt#RT 009", "X", 1);
     expect(teksTerakhir()).toContain("Pengaturan disimpan");
     expect(pakrt.getSetting("nama_rt")).toBe("RT 009");
   });
@@ -80,7 +80,7 @@ describe("handler pengaturan", () => {
   test("/set iuran_bulanan memperbarui tarif & tagihan belum", () => {
     admin();
     setup();
-    pakrt.handleSet(1, "/set iuran_bulanan 65000 2024-05", "Bendahara", 1);
+    pakrt.handleSet(1, "/set iuran_bulanan#65000#2024-05", "Bendahara", 1);
     const text = teksTerakhir();
     expect(text).toContain("Tarif diperbarui");
     expect(text).toContain("Rp 65.000");
@@ -91,7 +91,7 @@ describe("handler pengaturan", () => {
   test("/set kunci tidak dikenal -> error", () => {
     admin();
     setup();
-    pakrt.handleSet(1, "/set ngawur 1", "X", 1);
+    pakrt.handleSet(1, "/set ngawur#1", "X", 1);
     expect(teksTerakhir()).toContain("tidak dikenal");
   });
 

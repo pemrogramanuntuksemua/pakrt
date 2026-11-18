@@ -1,0 +1,17 @@
+{
+  "ADMIN_IDS": ["6823308074"],
+  "GROUP_CHAT_ID": "",
+  "Kas": [
+    ["tanggal", "keterangan", "jenis", "nominal", "alokasi", "ref", "dicatat_oleh"],
+    ["2026-01-01", "Iuran Januari", "masuk", 500000, "", "", "admin"],
+    ["2026-01-05", "Beli sapu", "keluar", 25000, "kasrt", "", "admin"]
+  ],
+  "Warga": [
+    ["id_kk", "no_rumah", "nama_kk", "no_hp", "alamat", "status", "mulai_iuran", "catatan"],
+    ["KK001", "12", "Budi", "0812", "Jl. Mawar", "aktif", "2026-01", ""]
+  ],
+  "Pengumuman": [
+    ["timestamp", "kategori", "isi", "pengirim"],
+    ["2026-01-02", "Info", "Gotong royong Sabtu", "admin"]
+  ]
+}

@@ -107,7 +107,7 @@ describe("rekap per periode", () => {
   test("handleRekap rentang menampilkan ringkasan per bulan", () => {
     admin();
     setup();
-    pakrt.handleRekap(1, "/rekap 2024-01 2024-02", "X", 1);
+    pakrt.handleRekap(1, "/rekap 2024-01..2024-02", "X", 1);
     const text = teksTerakhir();
     expect(text).toContain("Januari 2024 – Februari 2024");
     expect(text).toContain("Per bulan:");

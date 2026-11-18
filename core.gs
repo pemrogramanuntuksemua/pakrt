@@ -1,146 +1,3 @@
-// ==========================================
-// KONFIGURASI UTAMA
-// ==========================================
-const SPREADSHEET_ID = "";
-const TELEGRAM_TOKEN = "";
-const WEBHOOK_URL = ""; // Diisi setelah di-deploy
-
-// Daftar ID Telegram pengurus inti (Admin) yang diizinkan input kas & pengumuman
-// Cara cek ID Telegram bisa via bot @userinfobot
-const ADMIN_IDS = [];
-
-// ID Group Telegram warga RT untuk auto-broadcast pengumuman (opsional)
-let GROUP_CHAT_ID = "";
-
-// ==========================================
-// KONSTANTA SHEET & COMMAND
-// ==========================================
-const SHEET_SETTING = "Setting";
-const SHEET_KELUARGA = "Keluarga";
-const SHEET_ANGGOTA = "Anggota";
-const SHEET_TARIF = "TarifIuran";
-const SHEET_ALOKASI = "AlokasiIuran";
-const SHEET_TAGIHAN = "Tagihan";
-const SHEET_KAS = "Kas";
-const SHEET_TUTUP_BUKU = "TutupBuku";
-const SHEET_TUTUP_BUKU_ALOKASI = "TutupBukuAlokasi";
-const SHEET_PENGUMUMAN = "Pengumuman";
-const SHEET_TELEGRAM_USER = "TelegramUser";
-
-const SHEET_SCHEMA = {
-  Setting: ["kunci", "nilai", "tipe", "keterangan"],
-  Keluarga: ["id_kk", "no_rumah", "nama_kk", "no_hp", "alamat", "status", "mulai_iuran", "catatan"],
-  Anggota: ["id_kk", "nama", "hubungan", "jenis_kelamin", "tanggal_lahir", "status", "catatan"],
-  TarifIuran: ["berlaku_mulai", "nominal", "keterangan"],
-  AlokasiIuran: ["kode", "nama", "nominal", "sisa", "keterangan"],
-  Tagihan: ["periode", "id_kk", "no_rumah", "nama_kk", "nominal", "status", "tanggal_bayar", "dicatat_oleh", "catatan"],
-  Kas: ["tanggal", "keterangan", "jenis", "nominal", "alokasi", "ref", "dicatat_oleh"],
-  TutupBuku: ["periode", "jenis", "tarif", "total_kk", "total_jiwa", "total_tagihan", "total_terbayar", "total_masuk", "total_keluar", "saldo_awal", "saldo_akhir", "ditutup_oleh", "ditutup_pada"],
-  TutupBukuAlokasi: ["periode", "kode", "saldo_awal", "masuk", "keluar", "pindah_masuk", "pindah_keluar", "saldo_akhir"],
-  TelegramUser: ["id_telegram", "username", "nama", "id_kk", "peran", "status", "diminta_pada", "diverifikasi_oleh", "diverifikasi_pada"],
-  Pengumuman: ["timestamp", "kategori", "isi", "pengirim"],
-};
-
-// Sheet yang dihapus saat mode "reset"
-const SHEET_SKEMA = [
-  SHEET_SETTING, SHEET_KELUARGA, SHEET_ANGGOTA, SHEET_TARIF, SHEET_ALOKASI,
-  SHEET_TAGIHAN, SHEET_TUTUP_BUKU, SHEET_TUTUP_BUKU_ALOKASI, SHEET_TELEGRAM_USER,
-];
-
-// Sheet data yang dipertahankan saat "reset", hanya dihapus pada "fresh"
-const SHEET_DATA = [SHEET_KAS, SHEET_PENGUMUMAN];
-
-const CMD_START = "/start";
-const CMD_KAS = "/kas";
-const CMD_TAMBAHKAS = "/tambahkas";
-const CMD_PINDAHKAS = "/pindahkas";
-const CMD_WARGA = "/warga";
-const CMD_TAMBAHWARGA = "/tambahwarga";
-const CMD_TAMBAHKK = "/tambahkk";
-const CMD_TAMBAHANGGOTA = "/tambahanggota";
-const CMD_EDITANGGOTA = "/editanggota";
-const CMD_ADMIN = "/admin";
-const CMD_PENGUMUMAN = "/pengumuman";
-const CMD_BUATPENGUMUMAN = "/buatpengumuman";
-const CMD_SETTING = "/setting";
-const CMD_SET = "/set";
-const CMD_TARIF = "/tarif";
-const CMD_ALOKASI = "/alokasi";
-const CMD_TAGIHAN = "/tagihan";
-const CMD_BAYAR = "/bayar";
-const CMD_TUNGGAKAN = "/tunggakan";
-const CMD_REKAP = "/rekap";
-const CMD_DAFTAR = "/daftar";
-const CMD_TUTUPBUKU = "/tutupbuku";
-const CMD_GABUNG = "/gabung";
-const CMD_SAYA = "/saya";
-const CMD_VERIFIKASI = "/verifikasi";
-const CMD_TOLAK = "/tolak";
-const CMD_CABUT = "/cabut";
-
-const PREFIX_HANDLERS = {
-  [CMD_START]: handleStart,
-  [CMD_ADMIN]: handleAdmin,
-  [CMD_KAS]: handleKas,
-  [CMD_TAMBAHKAS]: handleTambahKas,
-  [CMD_PINDAHKAS]: handlePindahKas,
-  [CMD_WARGA]: handleWarga,
-  [CMD_TAMBAHWARGA]: handleTambahWarga,
-  [CMD_TAMBAHKK]: handleTambahKK,
-  [CMD_TAMBAHANGGOTA]: handleTambahAnggota,
-  [CMD_EDITANGGOTA]: handleEditAnggota,
-  [CMD_PENGUMUMAN]: handlePengumuman,
-  [CMD_BUATPENGUMUMAN]: handleBuatPengumuman,
-  [CMD_SETTING]: handleSetting,
-  [CMD_SET]: handleSet,
-  [CMD_TARIF]: handleTarif,
-  [CMD_ALOKASI]: handleAlokasi,
-  [CMD_TAGIHAN]: handleTagihan,
-  [CMD_BAYAR]: handleBayar,
-  [CMD_TUNGGAKAN]: handleTunggakan,
-  [CMD_REKAP]: handleRekap,
-  [CMD_DAFTAR]: handleDaftar,
-  [CMD_TUTUPBUKU]: handleTutupBuku,
-  [CMD_GABUNG]: handleGabung,
-  [CMD_SAYA]: handleSaya,
-  [CMD_VERIFIKASI]: handleVerifikasi,
-  [CMD_TOLAK]: handleTolak,
-  [CMD_CABUT]: handleCabut,
-};
-
-const TAGIHAN_BELUM = "belum";
-const TAGIHAN_LUNAS = "lunas";
-const TAGIHAN_BEBAS = "bebas";
-const TAGIHAN_BATAL = "batal";
-
-const JENIS_MASUK = "masuk";
-const JENIS_KELUAR = "keluar";
-const JENIS_PINDAH_MASUK = "pindah_masuk";
-const JENIS_PINDAH_KELUAR = "pindah_keluar";
-
-const ALOKASI_DEFAULT_KODE = "kasrt";
-
-const DEFAULT_SETTINGS = {
-  iuran_bulanan: { nilai: 50000, tipe: "angka", keterangan: "Tarif iuran default per KK" },
-  jatuh_tempo_hari: { nilai: 10, tipe: "angka", keterangan: "Tanggal jatuh tempo tiap bulan" },
-  nama_rt: { nilai: "RT 001", tipe: "teks", keterangan: "Nama RT" },
-  reminder_aktif: { nilai: false, tipe: "boolean", keterangan: "Pengingat otomatis (belum aktif)" },
-  iuran_mulai_default: { nilai: "2026-01", tipe: "teks", keterangan: "Periode mulai iuran KK baru" },
-  backfill_mulai: { nilai: "2026-01", tipe: "teks", keterangan: "Periode awal backfill tagihan" },
-  maks_telegram_per_kk: { nilai: 2, tipe: "angka", keterangan: "Maks akun Telegram per KK (0 = tanpa batas)" },
-  maks_kk_per_telegram: { nilai: 5, tipe: "angka", keterangan: "Maks KK aktif per akun Telegram (0 = tanpa batas)" },
-  admin_tambahan: { nilai: "", tipe: "teks", keterangan: "ID Telegram admin tambahan, pisahkan dengan koma" },
-};
-
-const DEFAULT_ALOKASI = [
-  { kode: "kasrt", nama: "Kas RT", nominal: 0, sisa: true, keterangan: "Penampung selisih tarif, operasional" },
-  { kode: "dkmt", nama: "Dana Kematian", nominal: 5000, sisa: false, keterangan: "Santunan warga" },
-  { kode: "kamsih", nama: "Keamanan & Kebersihan", nominal: 40000, sisa: false, keterangan: "Honor petugas" },
-];
-
-// ==========================================
-// HELPER UMUM
-// ==========================================
 function str(v) {
   return v === null || v === undefined ? "" : String(v).trim();
 }
@@ -255,9 +112,6 @@ function padKiri(v, n) {
   return s;
 }
 
-// ==========================================
-// PERIODE
-// ==========================================
 function periodeSekarang(tanggal) {
   const d = tanggal instanceof Date ? tanggal : new Date();
   return d.getFullYear() + "-" + pad2(d.getMonth() + 1);
@@ -341,9 +195,6 @@ function labelPeriode(periode) {
   return namaBulan(p.bulan) + " " + p.tahun;
 }
 
-// ==========================================
-// AKSES SHEET
-// ==========================================
 function getSpreadsheet(name) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   return ss.getSheetByName(name);
@@ -387,9 +238,6 @@ function setSel(nama, baris, kolom, nilai) {
   sheet.getRange(baris, idx + 1).setValue(nilai);
 }
 
-// ==========================================
-// SETTING
-// ==========================================
 function konversiNilai(nilai, tipe) {
   const t = str(tipe).toLowerCase();
   if (t === "angka") return parseAngka(nilai);
@@ -441,9 +289,6 @@ function setSetting(kunci, nilai) {
   return nilai;
 }
 
-// ==========================================
-// KELUARGA & ANGGOTA
-// ==========================================
 function generateIdKK() {
   const lock = LockService.getScriptLock();
   let locked = false;
@@ -723,14 +568,6 @@ function ubahAnggota(idKK, namaLama, perubahan) {
   };
 }
 
-// ==========================================
-// TELEGRAM USER <-> KK
-// ==========================================
-const TELEGRAM_MENUNGGU = "menunggu";
-const TELEGRAM_AKTIF = "aktif";
-const TELEGRAM_DITOLAK = "ditolak";
-const TELEGRAM_DICABUT = "dicabut";
-
 function getTelegramUserRows() {
   return bacaTabel(SHEET_TELEGRAM_USER).rows
     .map((t) => ({
@@ -1006,9 +843,6 @@ function notifPengajuanAdmin(hasil, username, nama) {
   });
 }
 
-// ==========================================
-// TARIF IURAN
-// ==========================================
 function getTarifList() {
   return bacaTabel(SHEET_TARIF).rows
     .map((t) => ({
@@ -1065,9 +899,6 @@ function sesuaikanTarifPeriode(periode, nominal) {
   return jumlah;
 }
 
-// ==========================================
-// ALOKASI / KANTONG KAS
-// ==========================================
 function getAlokasiAktif() {
   const list = bacaTabel(SHEET_ALOKASI).rows
     .map((a) => ({
@@ -1126,9 +957,6 @@ function hitungPembagian(nominal) {
     .filter((a) => a.nominal > 0);
 }
 
-// ==========================================
-// TAGIHAN
-// ==========================================
 function getTagihan() {
   return bacaTabel(SHEET_TAGIHAN).rows
     .map((t) => ({
@@ -1308,9 +1136,6 @@ function catatPembayaran(keluarga, periodeList, oleh) {
   };
 }
 
-// ==========================================
-// KAS MULTI-KANTONG
-// ==========================================
 function getKas() {
   return bacaTabel(SHEET_KAS).rows
     .map((j) => ({
@@ -1453,9 +1278,6 @@ function getMutasiKantong(kode, dari, sampai) {
     .sort((a, b) => a.tanggal - b.tanggal);
 }
 
-// ==========================================
-// TUTUP BUKU
-// ==========================================
 function getTutupBuku() {
   return bacaTabel(SHEET_TUTUP_BUKU).rows
     .map((t) => ({
@@ -1765,9 +1587,6 @@ function tutupBukuTahunan(tahun, oleh) {
   return { periode: label, jenis: "tahun", rekap: total, perKantong: daftar };
 }
 
-// ==========================================
-// REKAP & DAFTAR
-// ==========================================
 function progressBar(persen) {
   const p = Math.max(0, Math.min(100, Math.round(Number(persen) || 0)));
   const penuh = Math.round(p / 10);
@@ -1851,9 +1670,6 @@ function getDaftarKK(opsi) {
   return rows;
 }
 
-// ==========================================
-// HANDLER: UMUM
-// ==========================================
 function parseAdminIds(nilai) {
   return str(nilai)
     .split(/[\s,;]+/)
@@ -1927,470 +1743,6 @@ function tolakAdmin(chatId) {
   sendTelegramMessage(chatId, "⛔ *Akses Ditolak!*\n\nPerintah ini khusus untuk Pengurus RT.");
 }
 
-function handleStart(chatId, text, senderName, userId) {
-  const replyText =
-    "Halo, *" + escMd(senderName) + "*! Selamat datang di bot layanan warga *Pakrt* 🏠.\n\n" +
-    "Silakan gunakan perintah berikut:\n" +
-    "`/kas` - Saldo kas total & per kantong\n" +
-    "`/kas <kode>` - Mutasi satu kantong (contoh `/kas kasrt`)\n" +
-    "`/kas <YYYY-MM>` - Saldo akhir bulan tertentu\n" +
-    "`/alokasi` - Pembagian iuran ke kantong\n" +
-    "`/warga` - Jumlah KK & jiwa\n" +
-    "`/warga <id_kk/no_rumah/nama>` - Kartu KK & anggota\n" +
-    "`/gabung <id_kk>` - Ajukan keterkaitan akun Telegram ke KK (lewat DM)\n" +
-    "`/saya` - Cek KK yang terhubung dengan akun ini\n" +
-    "`/tagihan` - Tagihan KK Anda (setelah terhubung)\n" +
-    "`/tunggakan` - Tunggakan KK Anda (setelah terhubung)\n" +
-    "`/pengumuman` - Lihat pengumuman warga terbaru\n\n" +
-    "_Perintah Pengurus:_\n" +
-    "`/setting` - Daftar pengaturan\n" +
-    "`/set <kunci> <nilai> [periode]` - Ubah pengaturan\n" +
-    "`/tarif` - Riwayat tarif iuran\n" +
-    "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
-    "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`\n" +
-    "`/editanggota id_kk#Nama#kolom=nilai` - Ubah data anggota\n" +
-    "`/tagihan <id_kk/no_rumah/nama>` - Rincian tagihan\n" +
-    "`/bayar <id_kk/no_rumah/nama> <periode...>` - Catat iuran\n" +
-    "`/tunggakan` - Ringkasan tunggakan\n" +
-    "`/rekap [periode]` - Target vs terbayar\n" +
-    "`/daftar [semua]` - Daftar KK & tunggakan\n" +
-    "`/tambahkas jenis#alokasi#nominal#keterangan`\n" +
-    "`/pindahkas asal#tujuan#nominal#keterangan`\n" +
-    "`/tutupbuku <YYYY-MM|YYYY>` - Tutup buku\n" +
-    "`/verifikasi <id_kk|id_telegram>` - Setujui pengajuan akun\n" +
-    "`/tolak <id_kk|id_telegram>` - Tolak pengajuan akun\n" +
-    "`/cabut <id_kk|id_telegram>` - Putuskan akun dari KK\n" +
-    "`/admin [tambah|hapus] <id_telegram>` - Kelola admin tambahan\n" +
-    "`/buatpengumuman Kategori#Isi pesan`\n\n" +
-    "_Catatan:_ iuran hanya dicatat lewat `/bayar`. Pengeluaran wajib menyebut kantong.";
-  const pesan = replyText.replace(/`/g, "");
-  sendTelegramMessage(chatId, pesan);
-}
-
-function handleWarga(chatId, text, senderName, userId) {
-  try {
-    const arg = teksPerintah(text, CMD_WARGA);
-    if (arg) {
-      const kk = cariKeluarga(arg);
-      const admin = isAdmin(userId);
-      const diDm = isPrivateChat(chatId);
-      const anggota = getAnggota(kk.id_kk);
-      if (admin && diDm) {
-        const baris = anggota.map(
-          (a) =>
-            "• " + escMd(a.nama) + " — " + escMd(a.hubungan) +
-            (a.jenis_kelamin ? " (" + a.jenis_kelamin + ")" : "") +
-            (a.tanggal_lahir ? " · " + a.tanggal_lahir : "")
-        );
-        const reply =
-          "👤 *" + escMd(kk.nama_kk) + "* (" + kk.id_kk + ")\n" +
-          "🏠 No rumah: " + escMd(kk.no_rumah) + "\n" +
-          "📞 No HP: " + escMd(kk.no_hp || "-") + "\n" +
-          "📍 " + escMd(kk.alamat || "-") + "\n" +
-          "📅 Mulai iuran: " + (kk.mulai_iuran || "-") + "\n" +
-          "📌 Status: " + escMd(kk.status) + "\n" +
-          "💰 Tunggakan: *" + fmtRp(hitungTunggakanKK(kk.id_kk)) + "*\n\n" +
-          "👥 *Anggota (" + anggota.length + "):*\n" +
-          (baris.length ? baris.join("\n") : "• (belum ada data anggota)");
-        sendTelegramMessage(chatId, reply);
-        return;
-      }
-      const terhubung = !admin && isKkTerhubung(userId, kk.id_kk);
-      const anggotaAktif = getAnggotaAktif(kk.id_kk);
-      let teks =
-        "👤 *" + escMd(kk.nama_kk) + "* (" + kk.id_kk + ")\n" +
-        "🏠 No rumah: " + escMd(kk.no_rumah) + "\n" +
-        "📌 Status: " + escMd(kk.status) + "\n" +
-        "👥 Jumlah anggota: " + anggotaAktif.length + "\n\n";
-      if (terhubung && diDm) {
-        teks +=
-          "*Anggota:*\n" +
-          (anggotaAktif.length
-            ? anggotaAktif.map((a) => "• " + escMd(a.nama)).join("\n")
-            : "• (belum ada data anggota)") +
-          "\n\nKetik /tagihan atau /tunggakan untuk rincian iuran KK Anda.";
-      } else if (admin || terhubung) {
-        teks +=
-          "_Detail lengkap hanya ditampilkan lewat DM. " +
-          "Ketik /warga " + kk.id_kk + " di DM bot._";
-      } else {
-        teks +=
-          "_Detail lengkap hanya untuk pengurus. " +
-          "Ketik /gabung " + kk.id_kk + " lewat DM untuk mengajukan akses._";
-      }
-      sendTelegramMessage(chatId, teks);
-      return;
-    }
-    const aktif = getKeluargaAktif();
-    const ids = {};
-    const semuaIds = {};
-    getKeluarga().forEach((k) => {
-      semuaIds[k.id_kk] = true;
-    });
-    aktif.forEach((k) => {
-      ids[k.id_kk] = true;
-    });
-    let jiwa = 0;
-    let laki = 0;
-    let perempuan = 0;
-    let yatim = 0;
-    bacaTabel(SHEET_ANGGOTA).rows.forEach((a) => {
-      const id = str(a.id_kk);
-      const aktifAnggota = str(a.status).toLowerCase() === "aktif";
-      if (!id) return;
-      if (!semuaIds[id]) {
-        if (aktifAnggota) yatim++;
-        return;
-      }
-      if (!ids[id]) return;
-      if (!aktifAnggota) return;
-      jiwa++;
-      if (str(a.jenis_kelamin).toUpperCase() === "L") laki++;
-      if (str(a.jenis_kelamin).toUpperCase() === "P") perempuan++;
-    });
-    const reply =
-      "👥 *WARGA PAKRT*\n\n" +
-      "• KK aktif: *" + aktif.length + "*\n" +
-      "• Total jiwa: *" + jiwa + "*\n" +
-      "• Laki-laki: " + laki + " · Perempuan: " + perempuan + "\n" +
-      (yatim ? "• ⚠️ Anggota tanpa KK: " + yatim + "\n" : "") +
-      "\nKetik /daftar untuk rincian per KK.";
-    sendTelegramMessage(chatId, reply);
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleAdmin(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const arg = teksPerintah(text, CMD_ADMIN);
-    const bagian = arg.split(/\s+/).filter(Boolean);
-    const aksi = (bagian[0] || "").toLowerCase();
-    const inti = ADMIN_IDS.map((id) => str(id)).filter(Boolean);
-    if (!aksi) {
-      const tambahan = getAdminTambahan();
-      sendTelegramMessage(
-        chatId,
-        "👮 *ADMIN PAKRT*\n\n" +
-          "*Inti (kode):*\n" +
-          (inti.length ? inti.map((id) => "• `" + id + "`").join("\n") : "• (belum diisi)") +
-          "\n\n*Tambahan (Setting):*\n" +
-          (tambahan.length ? tambahan.map((id) => "• `" + id + "`").join("\n") : "• (belum ada)") +
-          "\n\nTambah: `/admin tambah <id_telegram>`\n" +
-          "Hapus: `/admin hapus <id_telegram>`\n" +
-          "_Hanya admin inti yang bisa mengubah daftar._"
-      );
-      return;
-    }
-    if (aksi !== "tambah" && aksi !== "hapus") {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ Gunakan:\n`/admin`\n`/admin tambah <id_telegram>`\n`/admin hapus <id_telegram>`"
-      );
-      return;
-    }
-    if (!isAdminInti(userId)) {
-      sendTelegramMessage(chatId, "⛔ Hanya admin inti yang bisa mengubah daftar admin.");
-      return;
-    }
-    const daftarId = parseAdminIds(bagian.slice(1).join(" "));
-    if (!daftarId.length) {
-      sendTelegramMessage(chatId, "⚠️ Sebutkan id_telegram. Contoh: `/admin tambah 123456789`");
-      return;
-    }
-    const tidakValid = daftarId.filter((id) => !/^\d+$/.test(id));
-    if (tidakValid.length) {
-      throw new Error("ID Telegram harus berupa angka: " + tidakValid.join(", "));
-    }
-    const tambahan = getAdminTambahan();
-    if (aksi === "tambah") {
-      const ditambah = [];
-      const sudahInti = [];
-      const sudahAda = [];
-      daftarId.forEach((id) => {
-        if (inti.indexOf(id) >= 0) sudahInti.push(id);
-        else if (tambahan.indexOf(id) >= 0) sudahAda.push(id);
-        else {
-          tambahan.push(id);
-          ditambah.push(id);
-        }
-      });
-      if (ditambah.length) {
-        simpanAdminTambahan(tambahan);
-        ditambah.forEach((id) => {
-          try {
-            sendTelegramMessage(
-              id,
-              "✅ Anda ditambahkan sebagai admin Pakrt oleh " + str(senderName || "pengurus") + "."
-            );
-          } catch (e) {
-            Logger.log("Gagal kirim DM ke admin baru " + id + ": " + e.toString());
-          }
-        });
-        sendTelegramMessage(
-          chatId,
-          "✅ *Admin ditambahkan*\n\n" +
-            ditambah.map((id) => "• `" + id + "`").join("\n") +
-            "\n\nTotal admin tambahan: *" + tambahan.length + "*" +
-            (sudahInti.length ? "\n\nSudah admin inti: " + sudahInti.join(", ") : "") +
-            (sudahAda.length ? "\n\nSudah terdaftar: " + sudahAda.join(", ") : "")
-        );
-      } else {
-        sendTelegramMessage(
-          chatId,
-          "ℹ️ Tidak ada admin baru." +
-            (sudahInti.length ? "\n\nSudah admin inti: " + sudahInti.join(", ") : "") +
-            (sudahAda.length ? "\n\nSudah terdaftar: " + sudahAda.join(", ") : "")
-        );
-      }
-      return;
-    }
-    const dihapus = tambahan.filter((id) => daftarId.indexOf(id) >= 0);
-    const sisa = tambahan.filter((id) => daftarId.indexOf(id) < 0);
-    const intiTetap = daftarId.filter((id) => inti.indexOf(id) >= 0);
-    const asing = daftarId.filter((id) => inti.indexOf(id) < 0 && tambahan.indexOf(id) < 0);
-    if (dihapus.length) {
-      simpanAdminTambahan(sisa);
-      sendTelegramMessage(
-        chatId,
-        "✅ *Admin dihapus*\n\n" +
-          dihapus.map((id) => "• `" + id + "`").join("\n") +
-          "\n\nSisa admin tambahan: *" + sisa.length + "*" +
-          (intiTetap.length ? "\n\nAdmin inti tidak bisa dihapus: " + intiTetap.join(", ") : "") +
-          (asing.length ? "\n\nTidak terdaftar: " + asing.join(", ") : "")
-      );
-    } else {
-      sendTelegramMessage(
-        chatId,
-        "ℹ️ Tidak ada admin tambahan yang dihapus." +
-          (intiTetap.length ? "\n\nAdmin inti tidak bisa dihapus: " + intiTetap.join(", ") : "") +
-          (asing.length ? "\n\nTidak terdaftar: " + asing.join(", ") : "")
-      );
-    }
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handlePengumuman(chatId, text, senderName, userId) {
-  let replyText = "";
-  const sheet = getSpreadsheet(SHEET_PENGUMUMAN);
-  if (!sheet) {
-    replyText = "⚠️ Tab 'Pengumuman' belum dibuat di Google Sheets.";
-  } else {
-    const rows = sheet.getDataRange().getValues();
-    if (rows.length <= 1) {
-      replyText = "📢 Belum ada pengumuman penting saat ini.";
-    } else {
-      replyText = "📢 *PENGUMUMAN WARGA TERBARU*\n\n";
-      const startIdx = Math.max(1, rows.length - 5);
-      for (let i = rows.length - 1; i >= startIdx; i--) {
-        const tgl = new Date(rows[i][0]).toLocaleDateString("id-ID");
-        replyText += "▪️ *[" + rows[i][1] + "]* (" + tgl + ")\n" + rows[i][2] + "\n\n";
-      }
-    }
-  }
-  sendTelegramMessage(chatId, replyText);
-}
-
-function handleBuatPengumuman(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const textClean = teksPerintah(text, CMD_BUATPENGUMUMAN);
-    const parts = textClean.split("#").map((p) => p.trim());
-    const kategori = parts[0] || "";
-    const isiPesan = parts.slice(1).join("#").trim();
-    if (!kategori || !isiPesan) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ *Format Salah!*\nGunakan: `/buatpengumuman Kategori#Isi Pesan`"
-      );
-      return;
-    }
-    const sheet = getSpreadsheet(SHEET_PENGUMUMAN);
-    if (!sheet) {
-      sendTelegramMessage(chatId, "⚠️ Tab 'Pengumuman' belum dibuat di Google Sheets.");
-      return;
-    }
-    sheet.appendRow([new Date(), kategori, isiPesan, senderName]);
-    if (GROUP_CHAT_ID) {
-      sendTelegramMessage(
-        GROUP_CHAT_ID,
-        "📢 *PENGUMUMAN RT*\n\n🏷️ Kategori: *" + escMd(kategori) + "*\n📝 " + isiPesan +
-          "\n\n_Disampaikan oleh Pengurus_"
-      );
-    }
-    sendTelegramMessage(
-      chatId,
-      "✅ *Pengumuman Berhasil Disimpan & Disebar!*\n\n🏷️ Kategori: *" + escMd(kategori) + "*\n📝 " + isiPesan
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTambahWarga(chatId, text, senderName, userId) {
-  sendTelegramMessage(
-    chatId,
-    "⚠️ `/tambahwarga` sudah diganti.\n\nGunakan:\n" +
-      "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
-      "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`"
-  );
-}
-
-function handleTambahKK(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const parts = teksPerintah(text, CMD_TAMBAHKK).split("#").map((p) => p.trim());
-    const nama = parts[0] || "";
-    const noHp = parts[1] || "";
-    const noRumah = parts[2] || "";
-    const alamat = parts[3] || "";
-    const catatan = parts.slice(4).join("#").trim();
-    if (!nama || !noRumah) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ *Format Salah!*\nGunakan: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`"
-      );
-      return;
-    }
-    const kk = tambahKeluarga(
-      { nama_kk: nama, no_hp: noHp, no_rumah: noRumah, alamat: alamat, catatan: catatan },
-      senderName
-    );
-    sendTelegramMessage(
-      chatId,
-      "✅ *KK Berhasil Ditambahkan!*\n\n" +
-        "🆔 ID: *" + kk.id_kk + "*\n" +
-        "👤 Kepala Keluarga: *" + escMd(kk.nama_kk) + "*\n" +
-        "🏠 No Rumah: *" + escMd(kk.no_rumah) + "*\n" +
-        "📞 No HP: " + escMd(kk.no_hp || "-") + "\n" +
-        "📍 " + escMd(kk.alamat || "-") + "\n" +
-        "📅 Mulai iuran: " + kk.mulai_iuran + "\n\n" +
-        "Tambahkan anggota lain dengan `/tambahanggota " + kk.id_kk + "#Nama#Hubungan#L/P#YYYY-MM-DD`.\n" +
-        "Lengkapi data kepala keluarga: `/editanggota " + kk.id_kk + "#" + kk.nama_kk + "#jk=L#lahir=YYYY-MM-DD`."
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTambahAnggota(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const parts = teksPerintah(text, CMD_TAMBAHANGGOTA).split("#").map((p) => p.trim());
-    const idKK = parts[0] || "";
-    const nama = parts[1] || "";
-    const hubungan = parts[2] || "Anggota";
-    const jk = parts[3] || "";
-    const lahir = parts[4] || "";
-    const catatan = parts.slice(5).join("#").trim();
-    if (!idKK || !nama) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ *Format Salah!*\nGunakan: `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`"
-      );
-      return;
-    }
-    const kk = cariKeluarga(idKK);
-    tambahAnggota(kk.id_kk, {
-      nama: nama,
-      hubungan: hubungan,
-      jenis_kelamin: jk,
-      tanggal_lahir: lahir,
-      catatan: catatan,
-    });
-    sendTelegramMessage(
-      chatId,
-      "✅ *Anggota Berhasil Ditambahkan!*\n\n" +
-        "👤 " + escMd(nama) + "\n" +
-        "🆔 KK: " + kk.id_kk + " (" + escMd(kk.nama_kk) + ")\n" +
-        "🔗 Hubungan: " + escMd(hubungan) + "\n" +
-        "⚧ " + (normalizeJK(jk) || "-") + " · 🎂 " + (lahir || "-")
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleEditAnggota(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const parts = teksPerintah(text, CMD_EDITANGGOTA).split("#").map((p) => p.trim());
-    const idKK = parts[0] || "";
-    const namaLama = parts[1] || "";
-    if (!idKK || !namaLama || parts.length < 3) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ *Format Salah!*\nGunakan: `/editanggota id_kk#Nama#kolom=nilai`\n" +
-          "Kolom: `nama`, `hubungan`, `jk`, `lahir`, `status`, `catatan`\n" +
-          "Contoh: `/editanggota KK-001#Budi#jk=L#lahir=1990-01-01`"
-      );
-      return;
-    }
-    const peta = {
-      nama: "nama",
-      hubungan: "hubungan",
-      jk: "jenis_kelamin",
-      jenis_kelamin: "jenis_kelamin",
-      lahir: "tanggal_lahir",
-      tanggal_lahir: "tanggal_lahir",
-      status: "status",
-      catatan: "catatan",
-    };
-    const perubahan = {};
-    parts.slice(2).forEach((seg) => {
-      const idx = seg.indexOf("=");
-      if (idx <= 0) {
-        throw new Error("Format perubahan harus kolom=nilai: '" + seg + "'.");
-      }
-      const kunci = seg.slice(0, idx).trim().toLowerCase();
-      const nilai = seg.slice(idx + 1).trim();
-      const kolom = peta[kunci];
-      if (!kolom) {
-        throw new Error(
-          "Kolom '" + kunci + "' tidak dikenal. Gunakan: nama, hubungan, jk, lahir, status, catatan."
-        );
-      }
-      perubahan[kolom] = nilai;
-    });
-    const hasil = ubahAnggota(idKK, namaLama, perubahan);
-    const urut = ["nama", "hubungan", "jenis_kelamin", "tanggal_lahir", "status", "catatan"];
-    const baris = urut
-      .filter((k) => Object.prototype.hasOwnProperty.call(hasil.perubahan, k))
-      .map((k) => {
-        const lama = str(hasil.sebelum[k]) || "-";
-        const baru = str(hasil.sesudah[k]) || "-";
-        return "• " + k + ": " + escMd(lama) + " → *" + escMd(baru) + "*";
-      });
-    sendTelegramMessage(
-      chatId,
-      "✅ *Anggota diperbarui*\n\n" +
-        "🆔 KK: " + hasil.id_kk + " (" + escMd(hasil.nama_kk) + ")\n" +
-        "👤 " + escMd(hasil.sesudah.nama) + " — " + escMd(hasil.sesudah.hubungan) + "\n\n" +
-        baris.join("\n")
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
 function kirimTagihanKK(chatId, kk) {
   const rows = getTagihan()
     .filter((t) => t.id_kk === kk.id_kk)
@@ -2459,347 +1811,6 @@ function ringkasanKkTerhubung(chatId, daftarKk) {
   );
 }
 
-function handleTagihan(chatId, text, senderName, userId) {
-  try {
-    const admin = isAdmin(userId);
-    if (!admin && !isPrivateChat(chatId)) {
-      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.");
-      return;
-    }
-    const arg = teksPerintah(text, CMD_TAGIHAN);
-    if (!arg) {
-      if (admin) {
-        sendTelegramMessage(chatId, "⚠️ Gunakan: `/tagihan <id_kk/no_rumah/nama>`");
-        return;
-      }
-      const terhubung = getKkTerhubung(userId);
-      if (!terhubung.length) {
-        sendTelegramMessage(
-          chatId,
-          "ℹ️ Akun Anda belum terhubung ke KK mana pun.\n\n" +
-            "Ajukan dengan `/gabung <id_kk>` (contoh: `/gabung KK-001`)."
-        );
-        return;
-      }
-      if (terhubung.length === 1) {
-        kirimTagihanKK(chatId, cariKeluarga(terhubung[0].id_kk));
-        return;
-      }
-      ringkasanKkTerhubung(chatId, terhubung);
-      return;
-    }
-    const kk = cariKeluarga(arg);
-    if (!admin && !isKkTerhubung(userId, kk.id_kk)) {
-      sendTelegramMessage(
-        chatId,
-        "⛔ Anda hanya bisa melihat tagihan KK yang terhubung dengan akun ini."
-      );
-      return;
-    }
-    kirimTagihanKK(chatId, kk);
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleBayar(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const bagian = teksPerintah(text, CMD_BAYAR).split(/\s+/).filter(Boolean);
-    if (!bagian.length) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/bayar <id_kk/no_rumah/nama> <periode...>`");
-      return;
-    }
-    const kk = cariKeluarga(bagian[0]);
-    const periode = bagian.slice(1);
-    const hasil = catatPembayaran(kk, periode, senderName);
-    const totalKantong = {};
-    hasil.detail.forEach((d) => {
-      d.pembagian.forEach((b) => {
-        totalKantong[b.kode] = (totalKantong[b.kode] || 0) + b.nominal;
-      });
-    });
-    const rincianKantong = Object.keys(totalKantong).map(
-      (kode) => "• " + padKanan(kode, 8) + padKiri(fmtRp(totalKantong[kode]), 12)
-    );
-    const tarif = hasil.detail.map((d) => fmtRp(d.nominal)).join(" / ");
-    sendTelegramMessage(
-      chatId,
-      "✅ *Pembayaran iuran dicatat*\n\n" +
-        "👤 " + escMd(kk.nama_kk) + " (" + kk.id_kk + " / " + escMd(kk.no_rumah) + ")\n" +
-        "📅 Periode: " + hasil.periode.join(", ") + "\n" +
-        "💰 Tagihan: " + tarif + "\n" +
-        "💵 Total: *" + fmtRp(hasil.total) + "*\n\n" +
-        "*Pembagian kantong:*\n" + rincianKantong.join("\n")
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTunggakan(chatId, text, senderName, userId) {
-  try {
-    const admin = isAdmin(userId);
-    if (!admin && !isPrivateChat(chatId)) {
-      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.");
-      return;
-    }
-    const arg = teksPerintah(text, CMD_TUNGGAKAN);
-    if (!admin) {
-      const terhubung = getKkTerhubung(userId);
-      if (!terhubung.length) {
-        sendTelegramMessage(
-          chatId,
-          "ℹ️ Akun Anda belum terhubung ke KK mana pun.\n\n" +
-            "Ajukan dengan `/gabung <id_kk>` (contoh: `/gabung KK-001`)."
-        );
-        return;
-      }
-      if (!arg) {
-        if (terhubung.length === 1) {
-          kirimTunggakanKK(chatId, cariKeluarga(terhubung[0].id_kk));
-          return;
-        }
-        ringkasanKkTerhubung(chatId, terhubung);
-        return;
-      }
-      const kkSendiri = cariKeluarga(arg);
-      if (!isKkTerhubung(userId, kkSendiri.id_kk)) {
-        sendTelegramMessage(
-          chatId,
-          "⛔ Anda hanya bisa melihat tunggakan KK yang terhubung dengan akun ini."
-        );
-        return;
-      }
-      kirimTunggakanKK(chatId, kkSendiri);
-      return;
-    }
-    const p = parsePeriode(arg);
-    if (arg && !p) {
-      kirimTunggakanKK(chatId, cariKeluarga(arg));
-      return;
-    }
-    const batas = p && p.bulanan ? p.periode : periodeSekarang();
-    const semua = getTagihan().filter(
-      (t) => t.status === TAGIHAN_BELUM && bandingPeriode(t.periode, batas) <= 0
-    );
-    const perKK = {};
-    semua.forEach((t) => {
-      if (!perKK[t.id_kk]) {
-        perKK[t.id_kk] = { nama: t.nama_kk, no: t.no_rumah, total: 0, bulan: 0 };
-      }
-      perKK[t.id_kk].total += t.nominal;
-      perKK[t.id_kk].bulan += 1;
-    });
-    const daftar = Object.keys(perKK)
-      .map((id) => ({ id: id, ...perKK[id] }))
-      .sort((a, b) => b.total - a.total);
-    const total = daftar.reduce((t, d) => t + d.total, 0);
-    sendTelegramMessage(
-      chatId,
-      "📊 *TUNGGAKAN IURAN* — s.d. " + labelPeriode(batas) + "\n\n" +
-        "Total: *" + fmtRp(total) + "*\n" +
-        "KK menunggak: *" + daftar.length + "*\n\n" +
-        "*Teratas:*\n" +
-        (daftar.length
-          ? daftar.slice(0, 5).map(
-              (d) => "• " + d.id + " " + escMd(d.no) + " " + escMd(d.nama) +
-                " — " + fmtRp(d.total) + " (" + d.bulan + " bln)"
-            ).join("\n")
-          : "• Tidak ada tunggakan 🎉")
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-// ==========================================
-// HANDLER: KETERKAITAN TELEGRAM
-// ==========================================
-function handleGabung(chatId, text, senderName, userId, username) {
-  try {
-    if (!isPrivateChat(chatId)) {
-      sendTelegramMessage(
-        chatId,
-        "🔒 Pendaftaran hanya lewat DM bot.\nKirim `/gabung <id_kk>` ke bot secara pribadi."
-      );
-      return;
-    }
-    const arg = teksPerintah(text, CMD_GABUNG);
-    if (!arg) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ Gunakan: `/gabung <id_kk/no_rumah/nama>`\nContoh: `/gabung KK-001`"
-      );
-      return;
-    }
-    const hasil = ajukanKeterkaitan(userId, username, senderName, arg);
-    const kk = hasil.keluarga;
-    if (hasil.sudah) {
-      if (hasil.status === TELEGRAM_AKTIF) {
-        sendTelegramMessage(
-          chatId,
-          "ℹ️ Akun ini sudah terhubung ke *" + kk.id_kk + "* (" + escMd(kk.nama_kk) + ").\n" +
-            "Ketik /tagihan atau /tunggakan."
-        );
-      } else {
-        sendTelegramMessage(
-          chatId,
-          "⏳ Pengajuan untuk *" + kk.id_kk + "* masih menunggu verifikasi pengurus."
-        );
-      }
-      return;
-    }
-    sendTelegramMessage(
-      chatId,
-      "✅ *Pengajuan terkirim*\n\n" +
-        "🆔 KK: *" + kk.id_kk + "*\n" +
-        "👤 " + escMd(kk.nama_kk) + " · 🏠 " + escMd(kk.no_rumah) + "\n\n" +
-        "Pengurus akan memverifikasi. Setelah disetujui, Anda bisa memakai /tagihan dan /tunggakan."
-    );
-    notifPengajuanAdmin(hasil, username, senderName);
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleSaya(chatId, text, senderName, userId) {
-  try {
-    if (!isPrivateChat(chatId)) {
-      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.");
-      return;
-    }
-    const semua = getTelegramUserRows().filter((t) => t.id_telegram === str(userId));
-    if (!semua.length) {
-      sendTelegramMessage(
-        chatId,
-        "ℹ️ Akun ini belum terhubung ke KK mana pun.\n\n" +
-          "Ajukan dengan `/gabung <id_kk>` (contoh: `/gabung KK-001`)."
-      );
-      return;
-    }
-    const keluarga = getKeluarga();
-    const aktif = semua.filter((t) => t.status === TELEGRAM_AKTIF);
-    const baris = semua.map((t) => {
-      const kk = keluarga.filter((k) => k.id_kk === t.id_kk)[0];
-      const label =
-        t.status === TELEGRAM_AKTIF ? "✅ aktif" :
-        t.status === TELEGRAM_MENUNGGU ? "⏳ menunggu" :
-        t.status === TELEGRAM_DITOLAK ? "❌ ditolak" : "⛔ dicabut";
-      return (
-        "• *" + t.id_kk + "* " +
-        (kk ? escMd(kk.no_rumah) + " " + escMd(kk.nama_kk) : "(KK tidak ditemukan)") +
-        " — " + label
-      );
-    });
-    sendTelegramMessage(
-      chatId,
-      "👤 *Akun Telegram Anda*\n" +
-        "🆔 `" + str(userId) + "`\n\n" +
-        baris.join("\n") +
-        (aktif.length
-          ? "\n\nKetik /tagihan atau /tunggakan."
-          : "\n\nMenunggu verifikasi pengurus.")
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleVerifikasi(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const arg = teksPerintah(text, CMD_VERIFIKASI);
-    if (!arg) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/verifikasi <id_kk|id_telegram>`");
-      return;
-    }
-    const t = verifikasiKeterkaitan(arg, senderName);
-    const kk = t.keluarga || {};
-    sendTelegramMessage(
-      chatId,
-      "✅ *Pengajuan disetujui*\n\n" +
-        "👤 " + escMd(t.nama || "-") +
-        (t.username ? " (@" + escMd(t.username) + ")" : "") + "\n" +
-        "🆔 id_telegram: `" + t.id_telegram + "`\n" +
-        "🏠 KK: *" + kk.id_kk + "* · " + escMd(kk.no_rumah) + " · " + escMd(kk.nama_kk)
-    );
-    sendTelegramMessage(
-      t.id_telegram,
-      "✅ Akun Anda kini terhubung ke KK *" + kk.id_kk + "* (" + escMd(kk.nama_kk) + ").\n" +
-        "Ketik /tagihan atau /tunggakan."
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTolak(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const arg = teksPerintah(text, CMD_TOLAK);
-    if (!arg) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/tolak <id_kk|id_telegram>`");
-      return;
-    }
-    const t = tolakKeterkaitan(arg, senderName);
-    const kk = t.keluarga || {};
-    sendTelegramMessage(
-      chatId,
-      "❌ *Pengajuan ditolak*\n\n" +
-        "🆔 id_telegram: `" + t.id_telegram + "`\n" +
-        "🏠 KK: *" + kk.id_kk + "* · " + escMd(kk.nama_kk)
-    );
-    sendTelegramMessage(
-      t.id_telegram,
-      "❌ Pengajuan keterkaitan ke KK *" + kk.id_kk + "* (" + escMd(kk.nama_kk) + ") ditolak pengurus."
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleCabut(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const arg = teksPerintah(text, CMD_CABUT);
-    if (!arg) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/cabut <id_kk|id_telegram>`");
-      return;
-    }
-    const rows = cabutKeterkaitan(arg, senderName);
-    sendTelegramMessage(
-      chatId,
-      "⛔ *Keterkaitan dicabut*\n\n" +
-        "Jumlah akun: *" + rows.length + "*\n" +
-        rows.map((t) => "• `" + t.id_telegram + "` → " + t.id_kk).join("\n")
-    );
-    rows.forEach((t) => {
-      sendTelegramMessage(
-        t.id_telegram,
-        "⛔ Keterkaitan akun Anda dengan KK *" + t.id_kk + "* telah dicabut pengurus."
-      );
-    });
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-// ==========================================
-// HANDLER: REKAP, DAFTAR, SETTING, KAS
-// ==========================================
 function penunggakPeriode(periode, limit) {
   const map = {};
   getTagihanPeriode(periode)
@@ -2869,48 +1880,6 @@ function formatRekapRentang(r) {
   );
 }
 
-function handleRekap(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const arg = teksPerintah(text, CMD_REKAP).split(/\s+/).filter(Boolean);
-    let dari;
-    let sampai;
-    if (!arg.length) {
-      dari = periodeSekarang();
-      sampai = dari;
-    } else if (arg.length === 1) {
-      const p = parsePeriode(arg[0]);
-      if (!p) throw new Error("Format: /rekap [YYYY-MM|YYYY] [YYYY-MM]");
-      if (p.bulanan) {
-        dari = p.periode;
-        sampai = p.periode;
-      } else {
-        dari = p.tahun + "-01";
-        const now = periodeSekarang();
-        sampai = now.slice(0, 4) === String(p.tahun) ? now : p.tahun + "-12";
-      }
-    } else {
-      const a = parsePeriode(arg[0]);
-      const b = parsePeriode(arg[1]);
-      if (!a || !a.bulanan || !b || !b.bulanan) {
-        throw new Error("Rentang harus dua periode YYYY-MM.");
-      }
-      dari = a.periode;
-      sampai = b.periode;
-    }
-    const rekap = hitungRekapRentang(dari, sampai);
-    sendTelegramMessage(
-      chatId,
-      dari === sampai ? formatRekapBulanan(rekap.perPeriode[0]) : formatRekapRentang(rekap)
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
 function formatDaftarKK(rows, meta) {
   const kepala = padKanan("No", 5);
   const nama = padKanan("Nama KK", 22);
@@ -2934,168 +1903,6 @@ function formatDaftarKK(rows, meta) {
   );
 }
 
-function handleDaftar(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const args = teksPerintah(text, CMD_DAFTAR).split(/\s+/).filter(Boolean);
-    let semua = false;
-    let urut = "rumah";
-    let halaman = 1;
-    args.forEach((a) => {
-      const low = a.toLowerCase();
-      if (low === "semua") semua = true;
-      else if (low === "tagihan" || low === "nama" || low === "rumah") urut = low;
-      else if (/^\d+$/.test(low)) halaman = Math.max(1, Number(low));
-    });
-    const semuaKK = getDaftarKK({ semua: semua, urut: urut });
-    const perHalaman = 25;
-    const totalHalaman = Math.max(1, Math.ceil(semuaKK.length / perHalaman));
-    const page = Math.min(halaman, totalHalaman);
-    const mulai = (page - 1) * perHalaman;
-    const rows = semuaKK.slice(mulai, mulai + perHalaman);
-    if (!semuaKK.length) {
-      sendTelegramMessage(chatId, "ℹ️ Belum ada KK terdaftar. Tambah lewat `/tambahkk`.");
-      return;
-    }
-    sendTelegramMessage(
-      chatId,
-      formatDaftarKK(rows, {
-        sampai: periodeSekarang(),
-        totalKK: semuaKK.length,
-        totalJiwa: semuaKK.reduce((t, r) => t + r.jiwa, 0),
-        totalTunggakan: semuaKK.reduce((t, r) => t + r.tunggakan, 0),
-        halaman: page,
-        totalHalaman: totalHalaman,
-      })
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleSetting(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  const nilai = getSettings();
-  const baris = Object.keys(DEFAULT_SETTINGS).map(
-    (k) => "• `" + k + "`: *" + String(nilai[k]) + "*  _(" + DEFAULT_SETTINGS[k].keterangan + ")_"
-  );
-  sendTelegramMessage(
-    chatId,
-    "⚙️ *PENGATURAN PAKRT*\n\n" + baris.join("\n") +
-      "\n\nUbah dengan `/set <kunci> <nilai>`."
-  );
-}
-
-function handleSet(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const bagian = teksPerintah(text, CMD_SET).split(/\s+/).filter(Boolean);
-    const kunci = bagian[0] || "";
-    if (!kunci) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
-      return;
-    }
-    if (kunci === "admin_tambahan") {
-      throw new Error("Gunakan `/admin tambah <id_telegram>` atau `/admin hapus <id_telegram>`.");
-    }
-    if (kunci === "iuran_bulanan") {
-      const nilai = bagian[1];
-      if (nilai === undefined) {
-        sendTelegramMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
-        return;
-      }
-      const p = parsePeriode(bagian[2] || periodeSekarang());
-      if (!p || !p.bulanan) throw new Error("Periode tarif harus format YYYY-MM.");
-      const nominal = parseAngka(nilai);
-      const hasil = setTarif(p.periode, nominal, "Perubahan via /set oleh " + str(senderName));
-      setSetting("iuran_bulanan", nominal);
-      sendTelegramMessage(
-        chatId,
-        "✅ *Tarif diperbarui*\n\n" +
-          "📅 Periode: *" + p.periode + "*\n" +
-          "💰 Tarif: *" + fmtRp(hasil.nominal) + "*\n" +
-          "🧾 Tagihan 'belum' disesuaikan: " + hasil.tagihanDiubah + " baris\n\n" +
-          hasil.pembagian.map((b) => "• " + b.kode + " — " + fmtRp(b.nominal)).join("\n")
-      );
-      return;
-    }
-    const nilai = bagian.slice(1).join(" ");
-    if (!nilai) {
-      sendTelegramMessage(chatId, "⚠️ Gunakan: `/set <kunci> <nilai> [periode]`");
-      return;
-    }
-    if (!Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, kunci)) {
-      throw new Error("Kunci '" + kunci + "' tidak dikenal. Lihat /setting.");
-    }
-    const def = DEFAULT_SETTINGS[kunci];
-    const dikonversi =
-      def.tipe === "angka" ? parseAngka(nilai) :
-      def.tipe === "boolean" ? toBool(nilai) : str(nilai);
-    setSetting(kunci, dikonversi);
-    sendTelegramMessage(
-      chatId,
-      "✅ *Pengaturan disimpan*\n\n• `" + kunci + "`: *" + String(dikonversi) + "*"
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTarif(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  const list = getTarifList();
-  const aktif = getTarifUntukPeriode(periodeSekarang());
-  const baris = list.map(
-    (t) => "• " + t.berlaku_mulai + " — *" + fmtRp(t.nominal) + "*" +
-      (t.keterangan ? "  _" + t.keterangan + "_" : "")
-  );
-  sendTelegramMessage(
-    chatId,
-    "💵 *TARIF IURAN*\n\n" +
-      (baris.length ? baris.join("\n") : "• (belum ada histori tarif)") +
-      "\n\nBerlaku sekarang: *" + fmtRp(aktif) + "* per KK\n" +
-      "Ubah: `/set iuran_bulanan <nominal> [YYYY-MM]`"
-  );
-}
-
-function handleAlokasi(chatId, text, senderName, userId) {
-  try {
-    const tarif = getTarifUntukPeriode(periodeSekarang());
-    const pembagian = hitungPembagian(tarif);
-    const val = validasiAlokasi();
-    const baris = val.list.map((a) => {
-      const nominal = a.sisa ? tarif - val.totalTetap : a.nominal;
-      return (
-        padKanan(a.kode, 8) + padKanan(a.nama, 26) + padKiri(fmtRp(nominal), 12) +
-        (a.sisa ? "  (sisa)" : "")
-      );
-    });
-    sendTelegramMessage(
-      chatId,
-      "🧩 *ALOKASI IURAN* — " + fmtRp(tarif) + " / KK\n\n" +
-        "```\n" + padKanan("kode", 8) + padKanan("kantong", 26) + padKiri("nominal", 12) + "\n" +
-        "─".repeat(46) + "\n" + baris.join("\n") + "\n" +
-        "─".repeat(46) + "\n" +
-        padKanan("TOTAL", 34) + padKiri(fmtRp(tarif), 12) + "\n```\n\n" +
-        "Ketik kode kantong di /kas, /tambahkas, dan /pindahkas."
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
 function formatSaldoKas(judul, saldoList, total, masuk, keluar) {
   const baris = saldoList.map(
     (s) => padKanan(s.kode, 8) + padKanan(s.nama, 26) + padKiri(fmtRp(s.saldo), 14)
@@ -3110,190 +1917,6 @@ function formatSaldoKas(judul, saldoList, total, masuk, keluar) {
   );
 }
 
-function handleKas(chatId, text, senderName, userId) {
-  try {
-    const sheet = getSpreadsheet(SHEET_KAS);
-    if (!sheet) {
-      sendTelegramMessage(chatId, "⚠️ Tab 'Kas' belum dibuat di Google Sheets.");
-      return;
-    }
-    const arg = teksPerintah(text, CMD_KAS);
-    const p = parsePeriode(arg);
-    if (arg && p && p.bulanan) {
-      const kas = hitungKasPeriode(p.periode);
-      const saldoList = kas.perKantong.map((d) => ({ kode: d.kode, nama: d.nama, saldo: d.saldo_akhir }));
-      sendTelegramMessage(
-        chatId,
-        formatSaldoKas(
-          "KAS RT — " + labelPeriode(p.periode),
-          saldoList,
-          kas.totalSaldoAkhir,
-          kas.totalMasuk,
-          kas.totalKeluar
-        )
-      );
-      return;
-    }
-    if (arg) {
-      const kode = arg.toLowerCase();
-      const daftar = getAlokasiAktif();
-      const alokasi = daftar.filter((a) => a.kode === kode)[0];
-      if (!alokasi) {
-        throw new Error("Kantong '" + kode + "' tidak dikenal. Lihat /alokasi.");
-      }
-      const mutasi = getMutasiKantong(kode).slice(-10);
-      const baris = mutasi.map(
-        (j) =>
-          "• " + formatTanggal(j.tanggal) + " " +
-          (j.jenis === JENIS_KELUAR || j.jenis === JENIS_PINDAH_KELUAR ? "−" : "+") +
-          fmtRp(j.nominal) + "  " + escMd(j.keterangan)
-      );
-      sendTelegramMessage(
-        chatId,
-        "👛 *" + escMd(alokasi.nama) + "* (`" + kode + "`)\n" +
-          "Saldo: *" + fmtRp(getSaldoKantong(kode)) + "*\n\n" +
-          "*10 mutasi terakhir:*\n" +
-          (baris.length ? baris.join("\n") : "• belum ada mutasi")
-      );
-      return;
-    }
-    const kas = hitungKasPeriode(periodeSekarang());
-    const saldoList = getSaldoSemuaKantong();
-    const total = saldoList.reduce((t, s) => t + s.saldo, 0);
-    sendTelegramMessage(
-      chatId,
-      formatSaldoKas(
-        "KAS RT — s.d. " + formatTanggal(new Date()),
-        saldoList,
-        total,
-        kas.totalMasuk,
-        kas.totalKeluar
-      ) + "\n\nKetik `/kas <kode>` untuk mutasi kantong."
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTambahKas(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const parts = teksPerintah(text, CMD_TAMBAHKAS).split("#").map((p) => p.trim());
-    const jenis = (parts[0] || "").toLowerCase();
-    const kodeDikenal = getAlokasiAktif().some((a) => a.kode === (parts[1] || "").toLowerCase());
-    if (parts.length >= 2 && !kodeDikenal && parseAngka(parts[1]) > 0) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ *Format /tambahkas berubah.*\n\n" +
-          "Sekarang wajib menyebut kantong:\n" +
-          "`/tambahkas jenis#alokasi#nominal#keterangan`\n\n" +
-          "Contoh:\n`/tambahkas keluar#kamsih#400000#Honor satpam`\n" +
-          "Lihat kantong dengan /alokasi."
-      );
-      return;
-    }
-    const alokasi = (parts[1] || "").toLowerCase();
-    const nominal = parseAngka(parts[2]);
-    const keterangan = parts.slice(3).join("#").trim() || "Tanpa Keterangan";
-    if ((jenis !== JENIS_MASUK && jenis !== JENIS_KELUAR) || !alokasi || !isFinite(nominal) || nominal <= 0) {
-      sendTelegramMessage(
-        chatId,
-        "⚠️ *Format Salah!*\nGunakan: `/tambahkas jenis#alokasi#nominal#keterangan`\n" +
-          "Contoh: `/tambahkas keluar#kamsih#400000#Honor satpam`"
-      );
-      return;
-    }
-    const hasil = tambahKasManual(jenis, alokasi, nominal, keterangan, senderName);
-    sendTelegramMessage(
-      chatId,
-      "✅ *Kas Berhasil Dicatat!*\n\n" +
-        "📌 Jenis: *" + hasil.jenis.toUpperCase() + "*\n" +
-        "👛 Kantong: *" + hasil.alokasi + "*\n" +
-        "💰 Nominal: *" + fmtRp(hasil.nominal) + "*\n" +
-        "📝 " + escMd(keterangan) + "\n" +
-        "💎 Saldo kantong: *" + fmtRp(hasil.saldo) + "*"
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handlePindahKas(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const parts = teksPerintah(text, CMD_PINDAHKAS).split("#").map((p) => p.trim());
-    const asal = (parts[0] || "").toLowerCase();
-    const tujuan = (parts[1] || "").toLowerCase();
-    const nominal = parseAngka(parts[2]);
-    const keterangan = parts.slice(3).join("#").trim() || "Pindah kas";
-    if (!asal || !tujuan || !nominal || nominal <= 0) {
-      throw new Error("Gunakan: /pindahkas asal#tujuan#nominal#keterangan");
-    }
-    const hasil = pindahKas(asal, tujuan, nominal, keterangan, senderName);
-    sendTelegramMessage(
-      chatId,
-      "✅ *Dana berhasil dipindahkan*\n\n" +
-        "Dari  : " + hasil.dari + "\n" +
-        "Ke    : " + hasil.ke + "\n" +
-        "Jumlah: *" + fmtRp(hasil.nominal) + "*\n" +
-        "Sisa " + hasil.dari + ": *" + fmtRp(hasil.saldoAsal) + "*"
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-function handleTutupBuku(chatId, text, senderName, userId) {
-  if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
-    return;
-  }
-  try {
-    const arg = teksPerintah(text, CMD_TUTUPBUKU);
-    if (!arg) throw new Error("Gunakan: /tutupbuku <YYYY-MM|YYYY>");
-    const hasil = tutupBuku(arg, senderName);
-    if (hasil.jenis === "bulan") {
-      const r = hasil.rekap;
-      sendTelegramMessage(
-        chatId,
-        "🔒 *TUTUP BUKU " + labelPeriode(hasil.periode).toUpperCase() + "*\n\n" +
-          "👥 KK: " + r.totalKK + " · Jiwa: " + r.totalJiwa + "\n" +
-          "🎯 Target: " + fmtRp(r.totalTagihan) + "\n" +
-          "✅ Terbayar: " + fmtRp(r.terbayar) + "\n" +
-          "⏳ Tunggakan: " + fmtRp(r.tunggakan) + "\n\n" +
-          "💵 Masuk: " + fmtRp(hasil.kas.totalMasuk) + "\n" +
-          "📤 Keluar: " + fmtRp(hasil.kas.totalKeluar) + "\n" +
-          "💎 Saldo akhir: *" + fmtRp(hasil.kas.totalSaldoAkhir) + "*\n\n" +
-          hasil.kas.perKantong.map(
-            (d) => "• " + d.kode + ": " + fmtRp(d.saldo_akhir)
-          ).join("\n")
-      );
-      return;
-    }
-    sendTelegramMessage(
-      chatId,
-      "🔒 *TUTUP BUKU TAHUN " + hasil.periode + "*\n\n" +
-        "🎯 Target setahun: " + fmtRp(hasil.rekap.total_tagihan) + "\n" +
-        "✅ Terbayar: " + fmtRp(hasil.rekap.total_terbayar) + "\n" +
-        "💵 Masuk: " + fmtRp(hasil.rekap.total_masuk) + "\n" +
-        "📤 Keluar: " + fmtRp(hasil.rekap.total_keluar) + "\n\n" +
-        "Saldo per kantong:\n" +
-        hasil.perKantong.map((d) => "• " + d.kode + ": " + fmtRp(d.saldo_akhir)).join("\n")
-    );
-  } catch (e) {
-    balasError(chatId, e);
-  }
-}
-
-// ==========================================
-// BOT: IDEMPOTENSI, WEBHOOK, DISPATCH
-// ==========================================
 function getProcessedUpdateIds() {
   try {
     const raw = PropertiesService.getScriptProperties().getProperty("PROCESSED_UPDATE_IDS");
@@ -3357,61 +1980,6 @@ function setWebhook(dropPending) {
   const response = UrlFetchApp.fetch(url);
   Logger.log(response.getContentText());
   return response.getContentText();
-}
-
-function doGet(e) {
-  return HtmlService.createHtmlOutput("OK");
-}
-
-function doPost(e) {
-  Logger.log("doPost invoked");
-  const startTime = new Date().getTime();
-  try {
-    if (isAckOnly()) {
-      Logger.log("ACK_ONLY mode: returning 200 ms=" + (new Date().getTime() - startTime));
-      return HtmlService.createHtmlOutput("OK");
-    }
-    const data = JSON.parse(e.postData.contents);
-    const updateId = data && data.update_id;
-    Logger.log("doPost start update_id=" + updateId);
-    if (isProcessed(updateId)) {
-      Logger.log("Duplicate update ignored: " + updateId);
-      return HtmlService.createHtmlOutput("OK");
-    }
-    markProcessed(updateId);
-    if (data.message && data.message.text) {
-      const chatId = data.message.chat.id;
-      const userId = data.message.from.id;
-      const text = str(data.message.text);
-      const senderName = data.message.from.first_name || "Warga";
-      const username = data.message.from.username || "";
-      handleCommand(chatId, text, senderName, userId, username);
-    }
-    Logger.log("doPost end update_id=" + updateId + " ms=" + (new Date().getTime() - startTime));
-    return HtmlService.createHtmlOutput("OK");
-  } catch (error) {
-    Logger.log("doPost error: " + error.toString());
-    return HtmlService.createHtmlOutput("Error: " + error.toString());
-  }
-}
-
-function handleCommand(chatId, text, senderName, userId, username) {
-  if (!chatId) {
-    Logger.log("Error: chatId is empty");
-    return HtmlService.createHtmlOutput("Failed");
-  }
-  processItem(chatId, text, senderName, userId, username);
-}
-
-function processItem(chatId, text, senderName, userId, username) {
-  const cleanText = str(text);
-  const token = cleanText.split(/\s+/)[0].toLowerCase();
-  const handler = PREFIX_HANDLERS[token];
-  if (handler) {
-    handler(chatId, cleanText, senderName, userId, username);
-  } else {
-    Logger.log("No matching action for: " + cleanText);
-  }
 }
 
 function pecahPesan(text, max) {
@@ -3534,9 +2102,6 @@ function stopPollingTrigger() {
   Logger.log("Polling trigger removed");
 }
 
-// ==========================================
-// MIGRASI
-// ==========================================
 function migrasiKasAlokasi(dryRun) {
   const sheet = getSpreadsheet(SHEET_KAS);
   if (!sheet) return { diubah: 0, dilewati: 0, pesan: "Tab Kas tidak ada" };
@@ -3632,9 +2197,6 @@ function migrasiWarga(dryRun) {
   return { dibuat: dibuat, dilewati: dilewati, error: error, dryRun: dryRun === true };
 }
 
-// ==========================================
-// SETUP & RESET SHEET
-// ==========================================
 function backupSpreadsheet(ss) {
   if (typeof DriveApp === "undefined" || !DriveApp) {
     throw new Error("DriveApp tidak tersedia. Backup tidak bisa dibuat.");
@@ -3841,236 +2403,161 @@ function backupSekarang() {
   return backupSpreadsheet(SpreadsheetApp.openById(SPREADSHEET_ID));
 }
 
-// ==========================================
-// EKSPOR UNTUK JEST (tidak memengaruhi GAS)
-// ==========================================
+
+// Node/Jest compatibility
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = {
-    SPREADSHEET_ID,
-    TELEGRAM_TOKEN,
-    WEBHOOK_URL,
-    GROUP_CHAT_ID,
-    ADMIN_IDS,
-    SHEET_SETTING,
-    SHEET_KELUARGA,
-    SHEET_ANGGOTA,
-    SHEET_TARIF,
-    SHEET_ALOKASI,
-    SHEET_TAGIHAN,
-    SHEET_KAS,
-    SHEET_TUTUP_BUKU,
-    SHEET_TUTUP_BUKU_ALOKASI,
-    SHEET_PENGUMUMAN,
-    SHEET_TELEGRAM_USER,
-    SHEET_SCHEMA,
-    SHEET_SKEMA,
-    SHEET_DATA,
-    DEFAULT_SETTINGS,
-    DEFAULT_ALOKASI,
-    TAGIHAN_BELUM,
-    TAGIHAN_LUNAS,
-    TAGIHAN_BEBAS,
-    TAGIHAN_BATAL,
-    TELEGRAM_MENUNGGU,
-    TELEGRAM_AKTIF,
-    TELEGRAM_DITOLAK,
-    TELEGRAM_DICABUT,
-    JENIS_MASUK,
-    JENIS_KELUAR,
-    JENIS_PINDAH_MASUK,
-    JENIS_PINDAH_KELUAR,
-    CMD_START,
-    CMD_KAS,
-    CMD_TAMBAHKAS,
-    CMD_PINDAHKAS,
-    CMD_WARGA,
-    CMD_TAMBAHWARGA,
-    CMD_TAMBAHKK,
-    CMD_TAMBAHANGGOTA,
-    CMD_EDITANGGOTA,
-    CMD_ADMIN,
-    CMD_PENGUMUMAN,
-    CMD_BUATPENGUMUMAN,
-    CMD_SETTING,
-    CMD_SET,
-    CMD_TARIF,
-    CMD_ALOKASI,
-    CMD_TAGIHAN,
-    CMD_BAYAR,
-    CMD_TUNGGAKAN,
-    CMD_REKAP,
-    CMD_DAFTAR,
-    CMD_TUTUPBUKU,
-    CMD_GABUNG,
-    CMD_SAYA,
-    CMD_VERIFIKASI,
-    CMD_TOLAK,
-    CMD_CABUT,
-    PREFIX_HANDLERS,
-    isAdmin,
-    isAdminInti,
-    getAdminIds,
-    getAdminTambahan,
-    parseAdminIds,
-    simpanAdminTambahan,
-    setAdminIds,
-    setGroupChatId,
-    getGroupChatId,
-    getProcessedUpdateIds,
-    isAckOnly,
-    isProcessed,
-    markProcessed,
-    deleteWebhook,
-    setWebhook,
-    getWebhookInfo,
-    pollTelegram,
-    setupPollingTrigger,
-    stopPollingTrigger,
-    getSpreadsheet,
-    str,
-    parseAngka,
-    fmtRp,
-    toBool,
-    parseTanggal,
-    formatTanggal,
-    formatStamp,
-    escMd,
-    naturalCompare,
-    sortNoRumah,
-    periodeSekarang,
-    periodeDariTanggal,
-    parsePeriode,
-    bandingPeriode,
-    tambahBulan,
-    daftarPeriode,
-    awalPeriode,
-    akhirPeriode,
-    labelPeriode,
-    bacaTabel,
-    tambahBaris,
-    setSel,
-    getSettings,
-    getSetting,
-    setSetting,
-    generateIdKK,
-    getKeluarga,
-    getKeluargaAktif,
-    getKeluargaBillable,
-    getAnggota,
-    getAnggotaAktif,
-    getJumlahJiwa,
-    getJumlahJiwaKK,
-    getJumlahJiwaUntukIds,
-    cariKeluarga,
-    tambahKeluarga,
-    tambahAnggota,
-    ubahAnggota,
-    normalizeJK,
-    getTelegramUserRows,
-    cariTelegramUser,
-    getKkTerhubung,
-    isKkTerhubung,
-    batasTelegramPerKk,
-    batasKkPerTelegram,
-    hitungAkunKk,
-    hitungKkAktifTelegram,
-    ajukanKeterkaitan,
-    barisUntukArg,
-    verifikasiKeterkaitan,
-    tolakKeterkaitan,
-    cabutKeterkaitan,
-    isPrivateChat,
-    notifPengajuanAdmin,
-    getTarifList,
-    getTarifUntukPeriode,
-    setTarif,
-    sesuaikanTarifPeriode,
-    getAlokasiAktif,
-    validasiAlokasi,
-    hitungPembagian,
-    getTagihan,
-    getTagihanPeriode,
-    cariTagihan,
-    isPeriodeTertutup,
-    pastikanTagihan,
-    backfillTagihan,
-    hitungTunggakanKK,
-    hitungTunggakan,
-    getBulanTunggakanKK,
-    refPembayaran,
-    kasRefAda,
-    catatPembayaran,
-    getKas,
-    efekKas,
-    getSaldoMap,
-    getSaldoKantong,
-    getSaldoSemuaKantong,
-    tambahKasManual,
-    pindahKas,
-    getMutasiKantong,
-    getTutupBuku,
-    getTutupBukuAlokasi,
-    hitungKasPeriode,
-    hitungRekapPeriode,
-    tutupBuku,
-    tutupBukuBulanan,
-    tutupBukuTahunan,
-    progressBar,
-    hitungRekapRentang,
-    getDaftarKK,
-    penunggakPeriode,
-    formatRekapBulanan,
-    formatRekapRentang,
-    formatDaftarKK,
-    handleStart,
-    handleKas,
-    handleTambahKas,
-    handlePindahKas,
-    handleWarga,
-    handleTambahWarga,
-    handleTambahKK,
-    handleTambahAnggota,
-    handleEditAnggota,
-    handlePengumuman,
-    handleBuatPengumuman,
-    handleSetting,
-    handleSet,
-    handleTarif,
-    handleAlokasi,
-    handleTagihan,
-    handleBayar,
-    handleTunggakan,
-    handleRekap,
-    handleDaftar,
-    handleTutupBuku,
-    handleGabung,
-    handleSaya,
-    handleVerifikasi,
-    handleTolak,
-    handleCabut,
-    handleAdmin,
-    handleCommand,
-    doPost,
-    doGet,
-    processItem,
-    pecahPesan,
-    sendTelegramMessage,
-    migrasiKasAlokasi,
-    migrasiWarga,
-    setupSheets,
-    terapkanSchema,
-    seedSettings,
-    seedTarifAwal,
-    seedAlokasiDefault,
-    backupSpreadsheet,
-    initSheets,
-    resetSheetSkema,
-    resetSheetSkemaDryRun,
-    resetSemuaSheet,
-    resetSemuaSheetDryRun,
-    backfillTagihanBulanan,
-    migrasiKasAlokasiDryRun,
-    migrasiWargaDryRun,
-    backupSekarang,
-  };
+    module.exports = {
+        str,
+        aman,
+        parseAngka,
+        fmtRp,
+        toBool,
+        parseTanggal,
+        formatTanggal,
+        formatStamp,
+        pad2,
+        escMd,
+        naturalCompare,
+        sortNoRumah,
+        padKanan,
+        padKiri,
+        periodeSekarang,
+        periodeDariTanggal,
+        parsePeriode,
+        bandingPeriode,
+        tambahBulan,
+        daftarPeriode,
+        awalPeriode,
+        akhirPeriode,
+        namaBulan,
+        labelPeriode,
+        getSpreadsheet,
+        bacaTabel,
+        tambahBaris,
+        setSel,
+        konversiNilai,
+        getSettings,
+        getSetting,
+        setSetting,
+        generateIdKK,
+        getKeluarga,
+        getKeluargaAktif,
+        getKeluargaBillable,
+        getAnggota,
+        getAnggotaAktif,
+        getJumlahJiwaKK,
+        getJumlahJiwa,
+        getJumlahJiwaUntukIds,
+        normalizeJK,
+        cariKeluarga,
+        tambahKeluarga,
+        tambahAnggota,
+        ubahAnggota,
+        getTelegramUserRows,
+        cariTelegramUser,
+        getKkTerhubung,
+        isKkTerhubung,
+        batasTelegramPerKk,
+        batasKkPerTelegram,
+        hitungAkunKk,
+        hitungKkAktifTelegram,
+        ajukanKeterkaitan,
+        barisUntukArg,
+        verifikasiKeterkaitan,
+        tolakKeterkaitan,
+        cabutKeterkaitan,
+        isPrivateChat,
+        notifPengajuanAdmin,
+        getTarifList,
+        getTarifUntukPeriode,
+        setTarif,
+        sesuaikanTarifPeriode,
+        getAlokasiAktif,
+        validasiAlokasi,
+        hitungPembagian,
+        getTagihan,
+        getTagihanPeriode,
+        cariTagihan,
+        isPeriodeTertutup,
+        pastikanTagihan,
+        backfillTagihan,
+        hitungTunggakanKK,
+        hitungTunggakan,
+        getBulanTunggakanKK,
+        refPembayaran,
+        kasRefAda,
+        catatPembayaran,
+        getKas,
+        efekKas,
+        getSaldoMap,
+        getSaldoKantong,
+        getSaldoSemuaKantong,
+        tambahKasManual,
+        pindahKas,
+        getMutasiKantong,
+        getTutupBuku,
+        getTutupBukuAlokasi,
+        snapshotTerakhirSebelum,
+        snapshotAlokasiSebelum,
+        daftarKodeKantong,
+        hitungKasPeriode,
+        hitungRekapPeriode,
+        tutupBuku,
+        tutupBukuBulanan,
+        tutupBukuTahunan,
+        progressBar,
+        hitungRekapRentang,
+        getDaftarKK,
+        parseAdminIds,
+        getAdminTambahan,
+        getAdminIds,
+        isAdmin,
+        isAdminInti,
+        simpanAdminTambahan,
+        setAdminIds,
+        setGroupChatId,
+        getGroupChatId,
+        teksPerintah,
+        balas,
+        balasError,
+        tolakAdmin,
+        kirimTagihanKK,
+        kirimTunggakanKK,
+        ringkasanKkTerhubung,
+        penunggakPeriode,
+        formatRekapBulanan,
+        formatRekapRentang,
+        formatDaftarKK,
+        formatSaldoKas,
+        getProcessedUpdateIds,
+        saveProcessedUpdateIds,
+        isAckOnly,
+        isProcessed,
+        markProcessed,
+        getWebhookInfo,
+        deleteWebhook,
+        setWebhook,
+        pecahPesan,
+        sendTelegramMessage,
+        pollTelegram,
+        setupPollingTrigger,
+        stopPollingTrigger,
+        migrasiKasAlokasi,
+        migrasiWarga,
+        backupSpreadsheet,
+        terapkanSchema,
+        seedSettings,
+        seedTarifAwal,
+        seedAlokasiDefault,
+        setupSheets,
+        initSheets,
+        resetSheetSkemaDryRun,
+        resetSheetSkema,
+        resetSemuaSheetDryRun,
+        resetSemuaSheet,
+        backfillTagihanBulanan,
+        migrasiKasAlokasiDryRun,
+        migrasiWargaDryRun,
+        backupSekarang,
+    };
 }

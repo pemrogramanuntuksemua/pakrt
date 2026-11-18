@@ -52,7 +52,7 @@ describe("handleAdmin", () => {
   test("admin inti menambah satu & beberapa ID sekaligus", () => {
     admin();
     setup();
-    pakrt.handleAdmin(1, "/admin tambah 64, 65", "Pengurus", 1);
+    pakrt.handleAdmin(1, "/admin tambah#64, 65", "Pengurus", 1);
     const teks = semuaTeks();
     expect(teks.join("\n")).toContain("Admin ditambahkan");
     expect(teks.join("\n")).toContain("`64`");
@@ -65,7 +65,7 @@ describe("handleAdmin", () => {
   test("ID non-angka ditolak dan tidak menyimpan apa pun", () => {
     admin();
     setup();
-    pakrt.handleAdmin(1, "/admin tambah abc", "X", 1);
+    pakrt.handleAdmin(1, "/admin tambah#abc", "X", 1);
     expect(teksTerakhir()).toContain("harus berupa angka");
     expect(pakrt.getAdminTambahan()).toEqual([]);
   });
@@ -73,12 +73,12 @@ describe("handleAdmin", () => {
   test("penambahan duplikat & admin inti tidak menggandakan data", () => {
     admin();
     settingAdmin("77");
-    pakrt.handleAdmin(1, "/admin tambah 77", "X", 1);
+    pakrt.handleAdmin(1, "/admin tambah#77", "X", 1);
     expect(teksTerakhir()).toContain("Tidak ada admin baru");
     expect(teksTerakhir()).toContain("Sudah terdaftar");
     expect(pakrt.getAdminTambahan()).toEqual(["77"]);
 
-    pakrt.handleAdmin(1, "/admin tambah 1", "X", 1);
+    pakrt.handleAdmin(1, "/admin tambah#1", "X", 1);
     expect(teksTerakhir()).toContain("Sudah admin inti");
     expect(pakrt.getAdminTambahan()).toEqual(["77"]);
   });
@@ -100,7 +100,7 @@ describe("handleAdmin", () => {
   test("admin inti menghapus admin tambahan", () => {
     admin();
     settingAdmin("77,88");
-    pakrt.handleAdmin(1, "/admin hapus 77", "X", 1);
+    pakrt.handleAdmin(1, "/admin hapus#77", "X", 1);
     expect(teksTerakhir()).toContain("Admin dihapus");
     expect(pakrt.getAdminTambahan()).toEqual(["88"]);
     expect(pakrt.isAdmin(77)).toBe(false);
@@ -110,7 +110,7 @@ describe("handleAdmin", () => {
   test("admin inti tidak bisa dihapus lewat /admin", () => {
     admin();
     settingAdmin("77");
-    pakrt.handleAdmin(1, "/admin hapus 1", "X", 1);
+    pakrt.handleAdmin(1, "/admin hapus#1", "X", 1);
     const text = teksTerakhir();
     expect(text).toContain("Tidak ada admin tambahan yang dihapus");
     expect(text).toContain("Admin inti tidak bisa dihapus");
@@ -123,7 +123,7 @@ describe("handleAdmin", () => {
     pakrt.handleAdmin(1, "/admin", "X", 77);
     expect(teksTerakhir()).toContain("ADMIN PAKRT");
 
-    pakrt.handleAdmin(1, "/admin tambah 99", "X", 77);
+    pakrt.handleAdmin(1, "/admin tambah#99", "X", 77);
     expect(teksTerakhir()).toContain("Hanya admin inti");
     expect(pakrt.getAdminTambahan()).toEqual(["77"]);
   });
