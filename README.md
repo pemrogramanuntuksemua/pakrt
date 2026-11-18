@@ -192,6 +192,8 @@ Perintah `/kas` memakai CacheService (TTL 60 detik) dengan invalidasi otomatis s
 
 ## Pesan admin
 
+Respons perintah admin diawali label `👮 *ADMIN*`. Beberapa pesan berisi perintah yang bisa diklik (membuka chat dengan teks terisi). Username bot diambil otomatis via `getMe` dan dicache; bisa juga diset manual di Script Properties `BOT_USERNAME`.
+
 Respons perintah admin diawali label `👮 *ADMIN*`. Beberapa pesan berisi perintah yang bisa diklik (membuka chat dengan teks terisi).
 
 Respons perintah admin diawali label `👮 *ADMIN*` agar mudah dibedakan.

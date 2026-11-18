@@ -1,5 +1,6 @@
 {
   "ADMIN_IDS": ["777777"],
+  "BOT_USERNAME": "pakrt_bot",
   "GROUP_CHAT_ID": "",
   "Kas": [
     ["tanggal", "keterangan", "jenis", "nominal", "alokasi", "ref", "dicatat_oleh"],

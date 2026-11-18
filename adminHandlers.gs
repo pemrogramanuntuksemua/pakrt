@@ -12,7 +12,7 @@ function handleAdmin(chatId, text, senderName, userId) {
       const tambahan = getAdminTambahan();
       sendAdminMessage(
         chatId,
-        "👮 *ADMIN PAKRT*\n\n" +
+        "📝 *ADMIN PAKRT*\n\n" +
           "*Inti (kode):*\n" +
           (inti.length ? inti.map((id) => "• `" + id + "`").join("\n") : "• (belum diisi)") +
           "\n\n*Tambahan (Setting):*\n" +

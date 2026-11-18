@@ -52,8 +52,12 @@ global.SpreadsheetApp = {
 
 // Capture Telegram sendMessage payloads
 const sent = [];
+const botUsername = process.env.BOT_USERNAME || (sampleData.BOT_USERNAME || "pakrt_bot");
 global.UrlFetchApp = {
   fetch: (url, options) => {
+    if (String(url).includes("/getMe")) {
+      return { getContentText: () => JSON.stringify({ ok: true, result: { username: botUsername } }) };
+    }
     if (options && options.payload) {
       try { sent.push(JSON.parse(options.payload)); } catch (e) { sent.push(options.payload); }
     } else {
