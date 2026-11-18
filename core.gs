@@ -980,9 +980,14 @@ function getTagihanPeriode(periode) {
 }
 
 function cariTagihan(idKK, periode) {
-  const id = str(idKK);
-  const p = str(periode);
-  return getTagihan().filter((t) => t.id_kk === id && t.periode === p)[0] || null;
+  const id = str(idKK).toUpperCase();
+  const p = str(periode).toUpperCase();
+  const list = getTagihan().filter((t) => str(t.id_kk).toUpperCase() === id && str(t.periode).toUpperCase() === p);
+  if (list.length) return list[0];
+  // Fallback: periode tersimpan mungkin lebih panjang (mis. YYYY-MM-DD)
+  const fallback = getTagihan().filter((t) => str(t.id_kk).toUpperCase() === id && str(t.periode).toUpperCase().startsWith(p));
+  if (fallback.length === 1) return fallback[0];
+  return null;
 }
 
 function isPeriodeTertutup(periode) {
@@ -1092,7 +1097,17 @@ function catatPembayaran(keluarga, periodeList, oleh) {
   });
   const target = periods.map((p) => {
     const t = cariTagihan(kk.id_kk, p);
-    if (!t) throw new Error("KK " + kk.id_kk + " tidak ditagih pada " + p + ".");
+    if (!t) {
+      const tersedia = getTagihan()
+        .filter((x) => str(x.id_kk).toUpperCase() === str(kk.id_kk).toUpperCase())
+        .map((x) => str(x.periode))
+        .filter(Boolean);
+      const uniq = Array.from(new Set(tersedia));
+      throw new Error(
+        "KK " + kk.id_kk + " tidak ditagih pada " + p +
+        ". Tersedia: " + (uniq.length ? uniq.join(", ") : "-") + "."
+      );
+    }
     if (t.status === TAGIHAN_LUNAS) {
       throw new Error("Tagihan " + kk.id_kk + " periode " + p + " sudah lunas.");
     }
