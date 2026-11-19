@@ -1,41 +1,102 @@
+function isRegisteredUser(userId) {
+  if (isAdmin(userId)) return true;
+  try {
+    return getTelegramUserRows().some((t) => t.id_telegram === str(userId));
+  } catch (e) {
+    return false;
+  }
+}
+
+function getUserKkCodes(userId) {
+  try {
+    const rows = getTelegramUserRows().filter((t) => t.id_telegram === str(userId));
+    const aktif = rows.filter((t) => t.status === TELEGRAM_AKTIF);
+    const sumber = aktif.length ? aktif : rows;
+    const codes = [];
+    sumber.forEach((t) => {
+      if (t.id_kk && codes.indexOf(t.id_kk) < 0) codes.push(t.id_kk);
+    });
+    return codes;
+  } catch (e) {
+    return [];
+  }
+}
+
 function handleStart(chatId, text, senderName, userId) {
-  const replyText =
-    "Halo, *" + escMd(senderName) + "*! Selamat datang di bot layanan warga *Pakrt* 🏠.\n\n" +
-    "Silakan gunakan perintah berikut:\n" +
-    "`/kas` - Saldo kas total & per kantong\n" +
-    "`/kas <kode>` - Mutasi satu kantong (contoh `/kas kasrt`)\n" +
-    "`/kas <YYYY-MM>` - Saldo akhir bulan tertentu\n" +
-    "`/alokasi` - Pembagian iuran ke kantong\n" +
-    "`/warga` - Jumlah KK & jiwa\n" +
-    "`/warga <id_kk/no_rumah/nama>` - Kartu KK & anggota\n" +
-    "`/gabung <id_kk>` - Ajukan keterkaitan akun Telegram ke KK (lewat DM)\n" +
-    "`/saya` - Cek KK yang terhubung dengan akun ini\n" +
-    "`/tagihan` - Tagihan KK Anda (setelah terhubung)\n" +
-    "`/tunggakan` - Tunggakan KK Anda (setelah terhubung)\n" +
-    "`/pengumuman` - Lihat pengumuman warga terbaru\n\n" +
-    "_Perintah Pengurus:_\n" +
-    "`/setting` - Daftar pengaturan\n" +
-    "`/set <kunci> <nilai> [periode]` - Ubah pengaturan\n" +
-    "`/tarif` - Riwayat tarif iuran\n" +
-    "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
-    "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`\n" +
-    "`/editanggota id_kk#Nama#kolom=nilai` - Ubah data anggota\n" +
-    "`/tagihan <id_kk/no_rumah/nama>` - Rincian tagihan\n" +
-    "`/bayar <id_kk/no_rumah/nama> <periode...>` - Catat iuran\n" +
-    "`/tunggakan` - Ringkasan tunggakan\n" +
-    "`/rekap [periode]` - Target vs terbayar\n" +
-    "`/daftar [semua]` - Daftar KK & tunggakan\n" +
-    "`/tambahkas jenis#alokasi#nominal#keterangan`\n" +
-    "`/pindahkas asal#tujuan#nominal#keterangan`\n" +
-    "`/tutupbuku <YYYY-MM|YYYY>` - Tutup buku\n" +
-    "`/verifikasi <id_kk|id_telegram>` - Setujui pengajuan akun\n" +
-    "`/tolak <id_kk|id_telegram>` - Tolak pengajuan akun\n" +
-    "`/cabut <id_kk|id_telegram>` - Putuskan akun dari KK\n" +
-    "`/admin [tambah|hapus] <id_telegram>` - Kelola admin tambahan\n" +
-    "`/buatpengumuman Kategori#Isi pesan`\n\n" +
-    "_Catatan:_ iuran hanya dicatat lewat `/bayar`. Pengeluaran wajib menyebut kantong.";
+  const nama = escMd(senderName);
+  let replyText = "Halo, *" + nama + "*! Selamat datang di bot layanan warga *Pakrt* 🏠.\n\n";
+  if (!isRegisteredUser(userId)) {
+    replyText +=
+      "Akun Anda belum terdaftar. Silakan daftar terlebih dahulu:\n" +
+      "`/gabung <id_kk>` - Ajukan keterkaitan akun ke KK (lewat DM)\n" +
+      "`/saya` - Cek status keterkaitan akun\n\n" +
+      "_Contoh: /gabung KK-001_";
+    const pesan = replyText.replace(/`/g, "");
+    sendTelegramMessage(chatId, pesan);
+    return;
+  }
+  replyText += "Pilih menu:\n" + "`/untukwarga` - Menu untuk warga\n" + "`/untukadmin` - Menu untuk admin\n";
+  if (isAdmin(userId)) {
+    replyText += "`/system` - Menu system (root admin)\n";
+  }
   const pesan = replyText.replace(/`/g, "");
   sendTelegramMessage(chatId, pesan);
+}
+
+function handleUntukWarga(chatId, text, senderName, userId) {
+  try {
+    const codes = getUserKkCodes(userId);
+    const kkCode = codes.length ? codes[0] : "";
+    const suffix = kkCode ? " " + kkCode : "";
+    let replyText =
+      "📋 *MENU WARGA*\n\n" +
+      "`/kas` - Saldo kas total & per kantong\n" +
+      "`/warga` - Jumlah KK & jiwa\n" +
+      "`/warga" + suffix + "` - Kartu KK & anggota\n" +
+      "`/tagihan" + suffix + "` - Tagihan KK Anda\n" +
+      "`/tunggakan" + suffix + "` - Tunggakan KK Anda\n" +
+      "`/pengumuman` - Pengumuman warga terbaru\n\n" +
+      "`/start` - Kembali ke menu awal\n";
+    const pesan = replyText.replace(/`/g, "");
+    sendTelegramMessage(chatId, pesan);
+  } catch (e) {
+    balasError(chatId, e);
+  }
+}
+
+function handleUntukAdmin(chatId, text, senderName, userId) {
+  if (!isAdmin(userId)) {
+    tolakAdmin(chatId);
+    return;
+  }
+  try {
+    const replyText =
+      "👮 *MENU ADMIN*\n\n" +
+      "*Uang/Kas/Iuran:*\n" +
+      "`/bayar <id_kk/no_rumah/nama> <periode...>` - Catat iuran\n" +
+      "`/daftar [semua]` - Daftar KK & tunggakan\n" +
+      "`/pindahkas asal#tujuan#nominal#keterangan`\n" +
+      "`/rekap [periode]` - Target vs terbayar\n" +
+      "`/tagihan <id_kk/no_rumah/nama>` - Rincian tagihan\n" +
+      "`/tambahkas jenis#alokasi#nominal#keterangan`\n" +
+      "`/tarif` - Riwayat tarif iuran\n" +
+      "`/tunggakan` - Ringkasan tunggakan\n" +
+      "`/tutupbuku <YYYY-MM|YYYY>` - Tutup buku\n\n" +
+      "*Warga/KK:*\n" +
+      "`/editanggota id_kk#Nama#kolom=nilai` - Ubah data anggota\n" +
+      "`/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`\n" +
+      "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n\n" +
+      "*Administrasi Akun/Pengumuman:*\n" +
+      "`/buatpengumuman Kategori#Isi pesan`\n" +
+      "`/cabut <id_kk|id_telegram>` - Putuskan akun dari KK\n" +
+      "`/tolak <id_kk|id_telegram>` - Tolak pengajuan akun\n" +
+      "`/verifikasi <id_kk|id_telegram>` - Setujui pengajuan akun\n\n" +
+      "`/start` - Kembali ke menu awal\n";
+    const pesan = replyText.replace(/`/g, "");
+    sendTelegramMessage(chatId, pesan);
+  } catch (e) {
+    balasError(chatId, e);
+  }
 }
 
 function handleWarga(chatId, text, senderName, userId) {
@@ -86,7 +147,11 @@ function handleWarga(chatId, text, senderName, userId) {
           "Ketik /warga " + kk.id_kk + " di DM bot._";
       } else {
         teks +=
-          "_Detail lengkap hanya untuk pengurus. " +
+          "*Anggota:*\n" +
+          (anggotaAktif.length
+            ? anggotaAktif.map((a) => "• " + escMd(a.nama) + " — " + escMd(a.hubungan)).join("\n")
+            : "• (belum ada data anggota)") +
+          "\n\n_Detail lengkap hanya untuk pengurus. " +
           "Ketik /gabung " + kk.id_kk + " lewat DM untuk mengajukan akses._";
       }
       sendTelegramMessage(chatId, teks);
@@ -431,11 +496,32 @@ function handleKas(chatId, text, senderName, userId) {
   }
 }
 
+function handleSystem(chatId, text, senderName, userId) {
+  if (!isAdminInti(userId)) {
+    tolakAdmin(chatId);
+    return;
+  }
+  try {
+    const replyText =
+      "🛠️ *MENU SYSTEM*\n\n" +
+      "`/setting` - Daftar pengaturan\n" +
+      "`/set <kunci> <nilai> [periode]` - Ubah pengaturan\n" +
+      "`/admin` - Daftar admin inti & tambahan\n" +
+      "`/admin tambah <id_telegram>` - Tambah admin\n" +
+      "`/admin hapus <id_telegram>` - Hapus admin tambahan\n\n" +
+      "`/start` - Kembali ke menu awal\n";
+    const pesan = replyText.replace(/`/g, "");
+    sendTelegramMessage(chatId, pesan);
+  } catch (e) {
+    balasError(chatId, e);
+  }
+}
+
 // Node/Jest compatibility
 if (typeof module !== "undefined" && module.exports) {
     const core = (typeof require !== "undefined") ? require("./core.gs") : null;
     if (core) Object.keys(core).forEach((k) => { if (typeof global !== "undefined") global[k] = core[k]; });
     module.exports = {
-        handleStart, handleKas, handleWarga, handlePengumuman, handleGabung, handleSaya, handleTagihan, handleTunggakan,
+        handleStart, handleKas, handleWarga, handlePengumuman, handleGabung, handleSaya, handleTagihan, handleTunggakan, handleUntukWarga, handleUntukAdmin, handleSystem,
     };
 }
