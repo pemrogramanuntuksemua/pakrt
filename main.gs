@@ -198,7 +198,7 @@ function handleCommand(chatId, text, senderName, userId, username) {
 function processItem(chatId, text, senderName, userId, username) {
   const cleanText = str(text);
   const token = cleanText.split(/\s+/)[0].toLowerCase();
-  const handler = PREFIX_HANDLERS[token];
+  const handler = getPrefixHandlers()[token];
   if (handler) {
     handler(chatId, cleanText, senderName, userId, username);
   } else {

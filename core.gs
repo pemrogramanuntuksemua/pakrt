@@ -2494,6 +2494,23 @@ function backupSekarang() {
   return backupSpreadsheet(SpreadsheetApp.openById(SPREADSHEET_ID));
 }
 
+function cekToken() {
+  const r = UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/getMe");
+  Logger.log(r.getContentText());
+  return r.getContentText();
+}
+
+function cekKirim(pesan) {
+  const target = (ADMIN_IDS && ADMIN_IDS.length) ? ADMIN_IDS[0] : "";
+  if (!target) {
+    Logger.log("ADMIN_IDS belum diisi.");
+    return "admin root kosong";
+  }
+  const teks = pesan === null || pesan === undefined || pesan === "" ? "tes langsung" : String(pesan);
+  sendTelegramMessage(target, teks);
+  return "terkirim ke " + target;
+}
+
 
 // Node/Jest compatibility
 if (typeof module !== "undefined" && module.exports) {
@@ -2654,5 +2671,7 @@ if (typeof module !== "undefined" && module.exports) {
         migrasiKasAlokasiDryRun,
         migrasiWargaDryRun,
         backupSekarang,
+        cekToken,
+        cekKirim,
     };
 }
