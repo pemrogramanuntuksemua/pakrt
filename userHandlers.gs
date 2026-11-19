@@ -55,8 +55,7 @@ function handleUntukWarga(chatId, text, senderName, userId) {
       "`/warga" + suffix + "` - Kartu KK & anggota\n" +
       "`/tagihan" + suffix + "` - Tagihan KK Anda\n" +
       "`/tunggakan" + suffix + "` - Tunggakan KK Anda\n" +
-      "`/pengumuman` - Pengumuman warga terbaru\n\n" +
-      "`/start` - Kembali ke menu awal\n";
+      "`/pengumuman` - Pengumuman warga terbaru\n";
     const pesan = replyText.replace(/`/g, "");
     sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
