@@ -74,6 +74,7 @@ const CMD_SYSTEM = "/system";
 const CMD_VERIFIKASI = "/verifikasi";
 const CMD_TOLAK = "/tolak";
 const CMD_CABUT = "/cabut";
+const CMD_CABUTKK = "/cabutkk";
 
 const TAGIHAN_BELUM = "belum";
 const TAGIHAN_LUNAS = "lunas";
@@ -146,6 +147,7 @@ function getPrefixHandlers() {
             [CMD_VERIFIKASI]: _G.handleVerifikasi,
             [CMD_TOLAK]: _G.handleTolak,
             [CMD_CABUT]: _G.handleCabut,
+            [CMD_CABUTKK]: _G.handleCabutKK,
         };
     }
     return PREFIX_HANDLERS;
@@ -196,6 +198,7 @@ function handleCommand(chatId, text, senderName, userId, username) {
 }
 
 function processItem(chatId, text, senderName, userId, username) {
+  _G.CURRENT_USER_ID = userId;
   const cleanText = str(text);
   const token = cleanText.split(/\s+/)[0].toLowerCase();
   const handler = getPrefixHandlers()[token];
@@ -279,6 +282,7 @@ if (typeof module !== "undefined" && module.exports) {
         global.CMD_VERIFIKASI = CMD_VERIFIKASI;
         global.CMD_TOLAK = CMD_TOLAK;
         global.CMD_CABUT = CMD_CABUT;
+        global.CMD_CABUTKK = CMD_CABUTKK;
         global.PREFIX_HANDLERS = getPrefixHandlers();
         global.handleCommand = handleCommand;
         global.processItem = processItem;
@@ -289,7 +293,7 @@ if (typeof module !== "undefined" && module.exports) {
         ADMIN_IDS,
         DEFAULT_SETTINGS, DEFAULT_ALOKASI,
         SHEET_SETTING, SHEET_KELUARGA, SHEET_ANGGOTA, SHEET_TARIF, SHEET_ALOKASI, SHEET_TAGIHAN, SHEET_KAS, SHEET_TUTUP_BUKU, SHEET_TUTUP_BUKU_ALOKASI, SHEET_PENGUMUMAN, SHEET_TELEGRAM_USER, SHEET_SCHEMA, SHEET_SKEMA, SHEET_DATA,
-        CMD_START, CMD_KAS, CMD_TAMBAHKAS, CMD_PINDAHKAS, CMD_WARGA, CMD_TAMBAHWARGA, CMD_TAMBAHKK, CMD_TAMBAHANGGOTA, CMD_EDITANGGOTA, CMD_ADMIN, CMD_PENGUMUMAN, CMD_BUATPENGUMUMAN, CMD_SETTING, CMD_SET, CMD_TARIF, CMD_ALOKASI, CMD_TAGIHAN, CMD_BAYAR, CMD_TUNGGAKAN, CMD_REKAP, CMD_DAFTAR, CMD_TUTUPBUKU, CMD_GABUNG, CMD_SAYA, CMD_UNTUKWARGA, CMD_UNTUKADMIN, CMD_SYSTEM, CMD_VERIFIKASI, CMD_TOLAK, CMD_CABUT,
+        CMD_START, CMD_KAS, CMD_TAMBAHKAS, CMD_PINDAHKAS, CMD_WARGA, CMD_TAMBAHWARGA, CMD_TAMBAHKK, CMD_TAMBAHANGGOTA, CMD_EDITANGGOTA, CMD_ADMIN, CMD_PENGUMUMAN, CMD_BUATPENGUMUMAN, CMD_SETTING, CMD_SET, CMD_TARIF, CMD_ALOKASI, CMD_TAGIHAN, CMD_BAYAR, CMD_TUNGGAKAN, CMD_REKAP, CMD_DAFTAR, CMD_TUTUPBUKU, CMD_GABUNG, CMD_SAYA, CMD_UNTUKWARGA, CMD_UNTUKADMIN, CMD_SYSTEM, CMD_VERIFIKASI, CMD_TOLAK, CMD_CABUT, CMD_CABUTKK,
         TAGIHAN_BELUM, TAGIHAN_LUNAS, TAGIHAN_BEBAS, TAGIHAN_BATAL,
         JENIS_MASUK, JENIS_KELUAR, JENIS_PINDAH_MASUK, JENIS_PINDAH_KELUAR,
         TELEGRAM_MENUNGGU, TELEGRAM_AKTIF, TELEGRAM_DITOLAK, TELEGRAM_DICABUT,

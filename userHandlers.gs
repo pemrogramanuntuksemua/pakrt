@@ -89,6 +89,7 @@ function handleUntukAdmin(chatId, text, senderName, userId) {
       "*Administrasi Akun/Pengumuman:*\n" +
       "`/buatpengumuman Kategori#Isi pesan`\n" +
       "`/cabut <id_kk|id_telegram>` - Putuskan akun dari KK\n" +
+      "`/cabutkk <id_kk>` - Nonaktifkan KK & anggotanya\n" +
       "`/tolak <id_kk|id_telegram>` - Tolak pengajuan akun\n" +
       "`/verifikasi <id_kk|id_telegram>` - Setujui pengajuan akun\n\n" +
       "`/start` - Kembali ke menu awal\n";
@@ -210,7 +211,7 @@ function handlePengumuman(chatId, text, senderName, userId) {
       replyText = "📢 *PENGUMUMAN WARGA TERBARU*\n\n";
       const startIdx = Math.max(1, rows.length - 5);
       for (let i = rows.length - 1; i >= startIdx; i--) {
-        const tgl = new Date(rows[i][0]).toLocaleDateString("id-ID");
+        const tgl = formatTanggal(rows[i][0]);
         replyText += "▪️ *[" + rows[i][1] + "]* (" + tgl + ")\n" + rows[i][2] + "\n\n";
       }
     }

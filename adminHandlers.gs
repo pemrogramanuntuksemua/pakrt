@@ -433,6 +433,51 @@ function handleCabut(chatId, text, senderName, userId) {
   }
 }
 
+function handleCabutKK(chatId, text, senderName, userId) {
+  if (!isAdmin(userId)) {
+    tolakAdmin(chatId);
+    return;
+  }
+  try {
+    const arg = teksPerintah(text, CMD_CABUTKK);
+    if (!arg) {
+      sendAdminMessage(chatId, "⚠️ Gunakan: `/cabutkk <id_kk>`");
+      return;
+    }
+    const kk = cariKeluarga(arg);
+    let rows = [];
+    try {
+      rows = cabutKeterkaitan(kk.id_kk, senderName);
+    } catch (e) {
+      rows = [];
+    }
+    if (kk._row) setSel(SHEET_KELUARGA, kk._row, "status", "Pindah");
+    const anggota = getAnggota(kk.id_kk);
+    anggota.forEach((a) => {
+      if (a._row) setSel(SHEET_ANGGOTA, a._row, "status", "Pindah");
+    });
+    sendAdminMessage(
+      chatId,
+      "⛔ *KK dinonaktifkan*\n\n" +
+        "🆔 *" + kk.id_kk + "* · " + escMd(kk.nama_kk) + "\n" +
+        "Akun Telegram dicabut: *" + rows.length + "*\n" +
+        "Anggota dinonaktifkan: *" + anggota.length + "*"
+    );
+    rows.forEach((t) => {
+      try {
+        sendTelegramMessage(
+          t.id_telegram,
+          "⛔ KK *" + kk.id_kk + "* telah dinonaktifkan pengurus."
+        );
+      } catch (e) {
+        // abaikan
+      }
+    });
+  } catch (e) {
+    balasError(chatId, e);
+  }
+}
+
 function handleRekap(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
     tolakAdmin(chatId);
@@ -767,6 +812,7 @@ if (typeof module !== "undefined" && module.exports) {
         handleBayar,
         handleBuatPengumuman,
         handleCabut,
+        handleCabutKK,
         handleDaftar,
         handleEditAnggota,
         handlePindahKas,

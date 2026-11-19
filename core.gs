@@ -1,3 +1,5 @@
+const _G = (typeof global !== "undefined") ? global : (typeof globalThis !== "undefined" ? globalThis : this);
+
 function str(v) {
   return v === null || v === undefined ? "" : String(v).trim();
 }
@@ -53,7 +55,9 @@ function parseTanggal(v) {
 function formatTanggal(v) {
   const d = parseTanggal(v);
   if (!d) return "-";
-  return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + "/" + d.getFullYear();
+  const hari = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"][d.getDay()];
+  const bulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][d.getMonth()];
+  return hari + ", " + d.getDate() + " " + bulan + " " + d.getFullYear();
 }
 
 function formatStamp(v) {
@@ -289,19 +293,35 @@ function setSetting(kunci, nilai) {
   return nilai;
 }
 
-function generateIdKK() {
+function generateIdKK(noRumah) {
   const lock = LockService.getScriptLock();
   let locked = false;
   aman(() => {
     locked = lock.tryLock(10000);
   });
   try {
-    let max = 0;
-    getKeluarga().forEach((k) => {
-      const m = str(k.id_kk).match(/^KK-(\d+)$/i);
-      if (m) max = Math.max(max, Number(m[1]));
+    const rumah = str(noRumah).toUpperCase().replace(/\s+/g, "");
+    const digits = rumah.replace(/\D/g, "");
+    const baseDigits = (digits || rumah || "0").padStart(3, "0");
+    const base = "KK" + baseDigits;
+    const existing = getKeluarga()
+      .map((k) => str(k.id_kk).toUpperCase())
+      .filter((id) => id === base || id.indexOf(base) === 0);
+    if (!existing.length) return base;
+    if (existing.indexOf(base) < 0) return base;
+    let maxIndex = 1;
+    existing.forEach((id) => {
+      const rest = id.slice(base.length);
+      if (rest === "") {
+        maxIndex = Math.max(maxIndex, 1);
+      } else if (/^\d+$/.test(rest)) {
+        maxIndex = Math.max(maxIndex, Number(rest));
+      }
     });
-    return "KK-" + String(max + 1).padStart(3, "0");
+    const nextIndex = maxIndex + 1;
+    if (nextIndex <= 1) return base;
+    if (nextIndex === 2) return base + "02";
+    return base + String(nextIndex).padStart(2, "0");
   } finally {
     if (locked) aman(() => lock.releaseLock());
   }
@@ -423,7 +443,7 @@ function tambahKeluarga(data, oleh) {
   const rumah = str(d.no_rumah);
   if (!nama) throw new Error("Nama kepala keluarga wajib diisi.");
   if (!rumah) throw new Error("Nomor rumah wajib diisi.");
-  const id = generateIdKK();
+  const id = generateIdKK(rumah);
   const mulai = str(d.mulai_iuran) || str(getSetting("iuran_mulai_default")) || periodeSekarang();
   tambahBaris(SHEET_KELUARGA, {
     id_kk: id,
@@ -2015,9 +2035,32 @@ function pecahPesan(text, max) {
   return hasil;
 }
 
+function footerMenuUntukUser(userId) {
+  const id = str(userId);
+  if (!id) return "";
+  if (isAdminInti(id)) {
+    return "\n\n`/untukwarga` - Menu warga\n`/untukadmin` - Menu admin\n`/system` - Menu system";
+  }
+  if (isAdmin(id)) {
+    return "\n\n`/untukwarga` - Menu warga\n`/untukadmin` - Menu admin";
+  }
+  try {
+    const terdaftar = getTelegramUserRows().some((t) => t.id_telegram === id);
+    if (terdaftar) return "\n\n`/untukwarga` - Menu warga";
+  } catch (e) {
+    // abaikan
+  }
+  return "";
+}
+
 function sendTelegramMessage(chatId, text) {
   const url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage";
-  const potongan = pecahPesan(text);
+  let pesan = str(text);
+  const footer = footerMenuUntukUser(typeof _G !== "undefined" ? _G.CURRENT_USER_ID : "");
+  if (footer && pesan.indexOf("/untukwarga") < 0 && pesan.indexOf("/untukadmin") < 0 && pesan.indexOf("/system") < 0) {
+    pesan = pesan + footer;
+  }
+  const potongan = pecahPesan(pesan);
   potongan.forEach((teks) => {
     const payload = { chat_id: chatId, text: teks, parse_mode: "Markdown" };
     const options = {

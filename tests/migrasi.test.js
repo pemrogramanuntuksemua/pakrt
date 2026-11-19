@@ -86,7 +86,7 @@ describe("migrasiWarga", () => {
     expect(hasil.error).toBe(0);
     const keluarga = pakrt.getKeluarga();
     expect(keluarga.length).toBe(2);
-    expect(keluarga.map((k) => k.id_kk)).toEqual(["KK-001", "KK-002"]);
+    expect(keluarga.map((k) => k.id_kk)).toEqual(["KK001", "KK002"]);
     expect(keluarga[0].nama_kk).toBe("Budi");
     expect(keluarga[0].no_rumah).toBe("A1");
     const anggota = pakrt.bacaTabel("Anggota").rows;
