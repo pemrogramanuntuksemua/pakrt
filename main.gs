@@ -198,7 +198,8 @@ function handleCommand(chatId, text, senderName, userId, username) {
 }
 
 function processItem(chatId, text, senderName, userId, username) {
-  _G.CURRENT_USER_ID = userId;
+  if (typeof global !== "undefined") global.CURRENT_USER_ID = userId;
+  if (typeof _G !== "undefined") _G.CURRENT_USER_ID = userId;
   const cleanText = str(text);
   const token = cleanText.split(/\s+/)[0].toLowerCase();
   const handler = getPrefixHandlers()[token];

@@ -32,7 +32,7 @@ function handleStart(chatId, text, senderName, userId) {
       "`/saya` - Cek status keterkaitan akun\n\n" +
       "_Contoh: /gabung KK-001_";
     const pesan = replyText.replace(/`/g, "");
-    sendTelegramMessage(chatId, pesan);
+    sendTelegramMessage(chatId, pesan, userId);
     return;
   }
   replyText += "Pilih menu:\n" + "`/untukwarga` - Menu untuk warga\n" + "`/untukadmin` - Menu untuk admin\n";
@@ -40,7 +40,7 @@ function handleStart(chatId, text, senderName, userId) {
     replyText += "`/system` - Menu system (root admin)\n";
   }
   const pesan = replyText.replace(/`/g, "");
-  sendTelegramMessage(chatId, pesan);
+  sendTelegramMessage(chatId, pesan, userId);
 }
 
 function handleUntukWarga(chatId, text, senderName, userId) {
@@ -58,7 +58,7 @@ function handleUntukWarga(chatId, text, senderName, userId) {
       "`/pengumuman` - Pengumuman warga terbaru\n\n" +
       "`/start` - Kembali ke menu awal\n";
     const pesan = replyText.replace(/`/g, "");
-    sendTelegramMessage(chatId, pesan);
+    sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
     balasError(chatId, e);
   }
@@ -94,7 +94,7 @@ function handleUntukAdmin(chatId, text, senderName, userId) {
       "`/verifikasi <id_kk|id_telegram>` - Setujui pengajuan akun\n\n" +
       "`/start` - Kembali ke menu awal\n";
     const pesan = replyText.replace(/`/g, "");
-    sendTelegramMessage(chatId, pesan);
+    sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
     balasError(chatId, e);
   }
@@ -125,7 +125,7 @@ function handleWarga(chatId, text, senderName, userId) {
           "💰 Tunggakan: *" + fmtRp(hitungTunggakanKK(kk.id_kk)) + "*\n\n" +
           "👥 *Anggota (" + anggota.length + "):*\n" +
           (baris.length ? baris.join("\n") : "• (belum ada data anggota)");
-        sendTelegramMessage(chatId, reply);
+        sendTelegramMessage(chatId, reply, userId);
         return;
       }
       const terhubung = !admin && isKkTerhubung(userId, kk.id_kk);
@@ -155,7 +155,7 @@ function handleWarga(chatId, text, senderName, userId) {
           "\n\n_Detail lengkap hanya untuk pengurus. " +
           "Ketik /gabung " + kk.id_kk + " lewat DM untuk mengajukan akses._";
       }
-      sendTelegramMessage(chatId, teks);
+      sendTelegramMessage(chatId, teks, userId);
       return;
     }
     const aktif = getKeluargaAktif();
@@ -192,7 +192,7 @@ function handleWarga(chatId, text, senderName, userId) {
       "• Laki-laki: " + laki + " · Perempuan: " + perempuan + "\n" +
       (yatim ? "• ⚠️ Anggota tanpa KK: " + yatim + "\n" : "") +
       "\nKetik /daftar untuk rincian per KK.";
-    sendTelegramMessage(chatId, reply);
+    sendTelegramMessage(chatId, reply, userId);
   } catch (e) {
     balasError(chatId, e);
   }
@@ -216,14 +216,14 @@ function handlePengumuman(chatId, text, senderName, userId) {
       }
     }
   }
-  sendTelegramMessage(chatId, replyText);
+  sendTelegramMessage(chatId, replyText, userId);
 }
 
 function handleTagihan(chatId, text, senderName, userId) {
   try {
     const admin = isAdmin(userId);
     if (!admin && !isPrivateChat(chatId)) {
-      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.");
+      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.", userId);
       return;
     }
     const arg = teksPerintah(text, CMD_TAGIHAN);
@@ -238,7 +238,7 @@ function handleTagihan(chatId, text, senderName, userId) {
     }
     if (!arg) {
       if (admin) {
-        sendTelegramMessage(chatId, "⚠️ Gunakan: `/tagihan <id_kk/no_rumah/nama>`");
+        sendTelegramMessage(chatId, "⚠️ Gunakan: `/tagihan <id_kk/no_rumah/nama>`", userId);
         return;
       }
       if (!terhubung.length) {
@@ -268,7 +268,7 @@ function handleTunggakan(chatId, text, senderName, userId) {
   try {
     const admin = isAdmin(userId);
     if (!admin && !isPrivateChat(chatId)) {
-      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.");
+      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.", userId);
       return;
     }
     const arg = teksPerintah(text, CMD_TUNGGAKAN);
@@ -392,7 +392,7 @@ function handleGabung(chatId, text, senderName, userId, username) {
 function handleSaya(chatId, text, senderName, userId) {
   try {
     if (!isPrivateChat(chatId)) {
-      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.");
+      sendTelegramMessage(chatId, "🔒 Perintah ini hanya bisa dipakai lewat DM bot.", userId);
       return;
     }
     const semua = getTelegramUserRows().filter((t) => t.id_telegram === str(userId));
@@ -436,14 +436,14 @@ function handleKas(chatId, text, senderName, userId) {
   try {
     const sheet = getSpreadsheet(SHEET_KAS);
     if (!sheet) {
-      sendTelegramMessage(chatId, "⚠️ Tab 'Kas' belum dibuat di Google Sheets.");
+      sendTelegramMessage(chatId, "⚠️ Tab 'Kas' belum dibuat di Google Sheets.", userId);
       return;
     }
     const arg = teksPerintah(text, CMD_KAS);
     const cacheKey = "kas:" + kasCacheVersion() + ":" + (arg || "default");
     const cached = cacheGet(cacheKey);
     if (cached) {
-      sendTelegramMessage(chatId, cached);
+      sendTelegramMessage(chatId, cached, userId);
       return;
     }
     const p = parsePeriode(arg);
@@ -491,7 +491,7 @@ function handleKas(chatId, text, senderName, userId) {
         ) + "\n\nKetik `/kas <kode>` untuk mutasi kantong.";
     }
     cachePut(cacheKey, replyText, 60);
-    sendTelegramMessage(chatId, replyText);
+    sendTelegramMessage(chatId, replyText, userId);
   } catch (e) {
     balasError(chatId, e);
   }
@@ -512,7 +512,7 @@ function handleSystem(chatId, text, senderName, userId) {
       "`/admin hapus <id_telegram>` - Hapus admin tambahan\n\n" +
       "`/start` - Kembali ke menu awal\n";
     const pesan = replyText.replace(/`/g, "");
-    sendTelegramMessage(chatId, pesan);
+    sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
     balasError(chatId, e);
   }

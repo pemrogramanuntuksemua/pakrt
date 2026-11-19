@@ -1,5 +1,3 @@
-const _G = (typeof global !== "undefined") ? global : (typeof globalThis !== "undefined" ? globalThis : this);
-
 function str(v) {
   return v === null || v === undefined ? "" : String(v).trim();
 }
@@ -2053,10 +2051,11 @@ function footerMenuUntukUser(userId) {
   return "";
 }
 
-function sendTelegramMessage(chatId, text) {
+function sendTelegramMessage(chatId, text, userId) {
   const url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage";
   let pesan = str(text);
-  const footer = footerMenuUntukUser(typeof _G !== "undefined" ? _G.CURRENT_USER_ID : "");
+  const uid = userId || (typeof global !== "undefined" ? global.CURRENT_USER_ID : "");
+  const footer = footerMenuUntukUser(uid);
   if (footer && pesan.indexOf("/untukwarga") < 0 && pesan.indexOf("/untukadmin") < 0 && pesan.indexOf("/system") < 0) {
     pesan = pesan + footer;
   }
