@@ -139,7 +139,7 @@ function handleWarga(chatId, text, senderName, userId) {
         teks +=
           "*Anggota:*\n" +
           (anggotaAktif.length
-            ? anggotaAktif.map((a) => "• " + escMd(a.nama)).join("\n")
+            ? anggotaAktif.map((a) => "• " + escMd(a.nama) + " — " + escMd(a.hubungan)).join("\n")
             : "• (belum ada data anggota)") +
           "\n\nKetik /tagihan atau /tunggakan untuk rincian iuran KK Anda.";
       } else if (admin || terhubung) {

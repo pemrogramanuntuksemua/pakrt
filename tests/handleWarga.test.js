@@ -103,7 +103,7 @@ describe("handleWarga", () => {
     expect(text).not.toContain("Jl. Mawar");
     expect(text).not.toContain("Mulai iuran");
     expect(text).not.toContain("Tunggakan:");
-    expect(text).not.toContain("Istri");
+    expect(text).toContain("Kepala Keluarga");
     expect(text).not.toContain("/gabung");
   });
 
