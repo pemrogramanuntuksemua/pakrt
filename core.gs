@@ -2060,6 +2060,13 @@ function sendTelegramMessage(chatId, text, userId) {
     pesan = pesan + footer;
   }
   const potongan = pecahPesan(pesan);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    props.setProperty("LAST_REPLY_TEXT", pesan);
+    props.setProperty("LAST_REPLY_CHAT", String(chatId));
+  } catch (e) {
+    // abaikan
+  }
   potongan.forEach((teks) => {
     const payload = { chat_id: chatId, text: teks, parse_mode: "Markdown" };
     const options = {

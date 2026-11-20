@@ -154,6 +154,25 @@ function getPrefixHandlers() {
 }
 
 function doGet(e) {
+  const params = (e && e.parameter) || {};
+  let debugMode = false;
+  try {
+    debugMode = PropertiesService.getScriptProperties().getProperty("DEBUG_MODE") === "true";
+  } catch (err) {
+    debugMode = false;
+  }
+  if (debugMode && params.debug === "1") {
+    let reply = "";
+    let chat = "";
+    try {
+      const props = PropertiesService.getScriptProperties();
+      reply = props.getProperty("LAST_REPLY_TEXT") || "";
+      chat = props.getProperty("LAST_REPLY_CHAT") || "";
+    } catch (err) {
+      reply = "error: " + String(err);
+    }
+    return HtmlService.createHtmlOutput(JSON.stringify({ chat: chat, reply: reply }));
+  }
   return HtmlService.createHtmlOutput("OK");
 }
 

@@ -230,7 +230,8 @@ Catatan: KK harus terdaftar dulu. Tagihan dibuat per KK berdasarkan tarif aktif.
 
 ## E2E manual (opsional)
 
-Script `e2e.js` mengirim update Telegram simulasi (`/start`) ke webhook yang sudah dideploy:
+Script `e2e.js` mengirim update Telegram simulasi (`/start`) ke webhook yang sudah dideploy.
+Script `e2e-reply.js` juga mengambil balasan terakhir via endpoint debug (`?debug=1`):
 
 ```bash
 WEBHOOK_URL=https://script.google.com/macros/s/.../exec node e2e.js 123456789 123456789 Tester
