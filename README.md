@@ -102,7 +102,8 @@ Jalankan berurutan dari editor:
 
 | Perintah | Keterangan | Contoh |
 |---|---|---|
-| `/start` | Sambutan & daftar perintah | `/start` |
+| `/start` | Sambutan; cek registrasi, lalu tampilkan menu yang sesuai | `/start` |
+| `/untukwarga` | Menu perintah untuk warga (dengan konteks KK pemanggil) | `/untukwarga` |
 | `/kas` | Saldo kas total & per kantong | `/kas` |
 | `/kas <kode>` | 10 mutasi terakhir satu kantong | `/kas kasrt` |
 | `/kas <YYYY-MM>` | Saldo akhir bulan tertentu | `/kas 2026-03` |
@@ -141,6 +142,9 @@ Jalankan berurutan dari editor:
 | `/buatpengumuman Kategori#Isi pesan` | Simpan & broadcast pengumuman | `/buatpengumuman Info#Kerja bakti Minggu` |
 | `/admin` | Daftar admin inti & tambahan | `/admin` |
 | `/admin aksi#id_telegram` | Tambah/hapus admin tambahan (khusus admin inti) | `/admin tambah#123456789` |
+| `/untukadmin` | Menu perintah untuk admin (dikelompokkan) | `/untukadmin` |
+| `/system` | Menu system (khusus admin inti/root) | `/system` |
+| `/cabutkk <id_kk>` | Nonaktifkan KK dan anggotanya | `/cabutkk KK066` |
 
 Catatan:
 
@@ -223,6 +227,16 @@ Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.
 7. Tutup buku: `/tutupbuku YYYY-MM` (mengunci periode)
 
 Catatan: KK harus terdaftar dulu. Tagihan dibuat per KK berdasarkan tarif aktif.
+
+## E2E manual (opsional)
+
+Script `e2e.js` mengirim update Telegram simulasi (`/start`) ke webhook yang sudah dideploy:
+
+```bash
+WEBHOOK_URL=https://script.google.com/macros/s/.../exec node e2e.js 123456789 123456789 Tester
+```
+
+Argumen: `chatId userId nama`. Berguna untuk memastikan webhook merespons tanpa harus chat manual.
 
 ## Menjalankan unit test
 
