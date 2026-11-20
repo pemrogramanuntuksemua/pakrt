@@ -209,7 +209,7 @@ Jalankan bot secara lokal (mock Google Sheets & Telegram):
 ```bash
 node simulate.js "/start"
 node simulate.js "/kas"
-node simulate.js "/tambahkas masuk#kasrt#100000#Donasi" 1 1 "Admin"
+TEXT='/tambahkas masuk#kasrt#100000#Donasi' node simulate.js "$TEXT" 1 777777 Admin
 ```
 
 Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.json` (termasuk `ADMIN_IDS`).

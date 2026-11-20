@@ -106,5 +106,112 @@
       "admin",
       "2026-01-02"
     ]
+  ],
+  "Setting": [
+    [
+      "kunci",
+      "nilai",
+      "tipe",
+      "keterangan"
+    ],
+    [
+      "iuran_bulanan",
+      "50000",
+      "angka",
+      "Tarif iuran default per KK"
+    ],
+    [
+      "maks_telegram_per_kk",
+      "2",
+      "angka",
+      ""
+    ],
+    [
+      "maks_kk_per_telegram",
+      "5",
+      "angka",
+      ""
+    ],
+    [
+      "admin_tambahan",
+      "",
+      "teks",
+      ""
+    ]
+  ],
+  "TarifIuran": [
+    [
+      "berlaku_mulai",
+      "nominal",
+      "keterangan"
+    ],
+    [
+      "2026-01",
+      "50000",
+      "Tarif awal"
+    ]
+  ],
+  "AlokasiIuran": [
+    [
+      "kode",
+      "nama",
+      "nominal",
+      "sisa",
+      "keterangan"
+    ],
+    [
+      "kasrt",
+      "Kas RT",
+      0,
+      true,
+      "Penampung selisih tarif, operasional"
+    ],
+    [
+      "dkmt",
+      "Dana Kematian",
+      5000,
+      false,
+      "Santunan warga"
+    ],
+    [
+      "kamsih",
+      "Keamanan & Kebersihan",
+      40000,
+      false,
+      "Honor petugas"
+    ]
+  ],
+  "Anggota": [
+    [
+      "id_kk",
+      "nama",
+      "hubungan",
+      "jenis_kelamin",
+      "tanggal_lahir",
+      "status",
+      "catatan"
+    ],
+    [
+      "KK001",
+      "12",
+      "Kepala Keluarga",
+      "L",
+      "",
+      "Aktif",
+      ""
+    ]
+  ],
+  "Tagihan": [
+    [
+      "periode",
+      "id_kk",
+      "no_rumah",
+      "nama_kk",
+      "nominal",
+      "status",
+      "tanggal_bayar",
+      "dicatat_oleh",
+      "catatan"
+    ]
   ]
 }
