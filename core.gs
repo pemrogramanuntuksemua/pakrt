@@ -64,6 +64,13 @@ function formatTanggalMDY(v) {
   return pad2(d.getMonth() + 1) + "/" + pad2(d.getDate()) + "/" + d.getFullYear();
 }
 
+function formatTanggalTagihan(v) {
+  const d = parseTanggal(v);
+  if (!d) return "";
+  const bulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][d.getMonth()];
+  return pad2(d.getDate()) + "/" + bulan + "/" + String(d.getFullYear()).slice(-2);
+}
+
 function formatStamp(v) {
   const d = parseTanggal(v) || new Date();
   return (
@@ -1804,7 +1811,7 @@ function kirimTagihanKK(chatId, kk) {
       t.status === TAGIHAN_BATAL ? "✖️" : "⏳";
     return (
       "• " + t.periode + "  " + tanda + " " + padKiri(fmtRp(t.nominal), 12) +
-      (t.tanggal_bayar ? "  (" + formatTanggal(t.tanggal_bayar) + ")" : "")
+      (t.tanggal_bayar ? "  (" + formatTanggalTagihan(t.tanggal_bayar) + ")" : "")
     );
   });
   sendTelegramMessage(
@@ -2578,6 +2585,7 @@ if (typeof module !== "undefined" && module.exports) {
         parseTanggal,
         formatTanggal,
         formatTanggalMDY,
+        formatTanggalTagihan,
         formatStamp,
         pad2,
         escMd,
