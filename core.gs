@@ -58,6 +58,12 @@ function formatTanggal(v) {
   return hari + ", " + d.getDate() + " " + bulan + " " + d.getFullYear();
 }
 
+function formatTanggalMDY(v) {
+  const d = parseTanggal(v);
+  if (!d) return "";
+  return pad2(d.getMonth() + 1) + "/" + pad2(d.getDate()) + "/" + d.getFullYear();
+}
+
 function formatStamp(v) {
   const d = parseTanggal(v) || new Date();
   return (
@@ -850,8 +856,8 @@ function notifPengajuanAdmin(hasil, username, nama) {
     (username ? " (@" + escMd(username) + ")" : "") + "\n" +
     "🆔 id_telegram: `" + hasil.id_telegram + "`\n" +
     "🏠 KK: *" + kk.id_kk + "* · " + escMd(kk.no_rumah) + " · " + escMd(kk.nama_kk) + "\n\n" +
-    "Setujui: " + cmdLink("/verifikasi " + kk.id_kk) + "\n" +
-    "Tolak: " + cmdLink("/tolak " + kk.id_kk);
+    "Setujui: `/verifikasi " + kk.id_kk + "`\n" +
+    "Tolak: `/tolak " + kk.id_kk + "`";
   daftarAdmin.forEach((id) => {
     try {
       sendAdminMessage(id, teks);
@@ -1768,12 +1774,12 @@ function balas(chatId, teks) {
   sendTelegramMessage(chatId, teks);
 }
 
-function balasError(chatId, error) {
-  sendTelegramMessage(chatId, "⚠️ " + (error && error.message ? error.message : String(error)));
+function balasError(chatId, error, userId) {
+  sendTelegramMessage(chatId, "⚠️ " + (error && error.message ? error.message : String(error)), userId);
 }
 
-function tolakAdmin(chatId) {
-  sendTelegramMessage(chatId, "⛔ *Akses Ditolak!*\n\nPerintah ini khusus untuk Pengurus RT.");
+function tolakAdmin(chatId, userId) {
+  sendTelegramMessage(chatId, "⛔ *Akses Ditolak!*\n\nPerintah ini khusus untuk Pengurus RT.", userId);
 }
 
 function kirimTagihanKK(chatId, kk) {
@@ -1808,7 +1814,7 @@ function kirimTagihanKK(chatId, kk) {
       daftar.join("\n") +
       "\n\n⏳ Total tunggakan: *" + fmtRp(tunggakan) + "*\n" +
       (belumPertama
-        ? "Ketik " + cmdLink("/bayar " + kk.id_kk + " " + belumPertama.periode) + " untuk mencatat pembayaran."
+        ? "Ketik `/bayar " + kk.id_kk + " " + belumPertama.periode + "` untuk mencatat pembayaran."
         : "Semua tagihan sudah lunas ✅")
   );
 }
@@ -2054,7 +2060,7 @@ function footerMenuUntukUser(userId) {
 function sendTelegramMessage(chatId, text, userId) {
   const url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage";
   let pesan = str(text);
-  const uid = userId || (typeof global !== "undefined" ? global.CURRENT_USER_ID : "");
+  const uid = userId;
   const footer = footerMenuUntukUser(uid);
   if (footer && pesan.indexOf("/untukwarga") < 0 && pesan.indexOf("/untukadmin") < 0 && pesan.indexOf("/system") < 0) {
     pesan = pesan + footer;
@@ -2571,6 +2577,7 @@ if (typeof module !== "undefined" && module.exports) {
         toBool,
         parseTanggal,
         formatTanggal,
+        formatTanggalMDY,
         formatStamp,
         pad2,
         escMd,

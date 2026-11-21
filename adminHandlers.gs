@@ -1,6 +1,6 @@
 function handleAdmin(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -109,13 +109,13 @@ function handleAdmin(chatId, text, senderName, userId) {
       );
     }
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleBuatPengumuman(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -148,7 +148,7 @@ function handleBuatPengumuman(chatId, text, senderName, userId) {
       "✅ *Pengumuman Berhasil Disimpan & Disebar!*\n\n🏷️ Kategori: *" + escMd(kategori) + "*\n📝 " + isiPesan
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -163,7 +163,7 @@ function handleTambahWarga(chatId, text, senderName, userId) {
 
 function handleTambahKK(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -197,13 +197,13 @@ function handleTambahKK(chatId, text, senderName, userId) {
         "Lengkapi data kepala keluarga: `/editanggota " + kk.id_kk + "#" + kk.nama_kk + "#jk=L#lahir=YYYY-MM-DD`."
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleTambahAnggota(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -238,13 +238,13 @@ function handleTambahAnggota(chatId, text, senderName, userId) {
         "⚧ " + (normalizeJK(jk) || "-") + " · 🎂 " + (lahir || "-")
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleEditAnggota(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -303,13 +303,13 @@ function handleEditAnggota(chatId, text, senderName, userId) {
         baris.join("\n")
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleBayar(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -341,13 +341,13 @@ function handleBayar(chatId, text, senderName, userId) {
         "*Pembagian kantong:*\n" + rincianKantong.join("\n")
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleVerifikasi(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -372,13 +372,13 @@ function handleVerifikasi(chatId, text, senderName, userId) {
         "Ketik /tagihan atau /tunggakan."
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleTolak(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -400,13 +400,13 @@ function handleTolak(chatId, text, senderName, userId) {
       "❌ Pengajuan keterkaitan ke KK *" + kk.id_kk + "* (" + escMd(kk.nama_kk) + ") ditolak pengurus."
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleCabut(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -429,13 +429,13 @@ function handleCabut(chatId, text, senderName, userId) {
       );
     });
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleCabutKK(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -474,13 +474,13 @@ function handleCabutKK(chatId, text, senderName, userId) {
       }
     });
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleRekap(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -517,13 +517,13 @@ function handleRekap(chatId, text, senderName, userId) {
       dari === sampai ? formatRekapBulanan(rekap.perPeriode[0]) : formatRekapRentang(rekap)
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleDaftar(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -559,13 +559,13 @@ function handleDaftar(chatId, text, senderName, userId) {
       })
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleSetting(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   const nilai = getSettings();
@@ -581,7 +581,7 @@ function handleSetting(chatId, text, senderName, userId) {
 
 function handleSet(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -633,13 +633,13 @@ function handleSet(chatId, text, senderName, userId) {
       "✅ *Pengaturan disimpan*\n\n• `" + kunci + "`: *" + String(dikonversi) + "*"
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleTarif(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   const list = getTarifList();
@@ -679,13 +679,13 @@ function handleAlokasi(chatId, text, senderName, userId) {
         "Ketik kode kantong di /kas, /tambahkas, dan /pindahkas."
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleTambahKas(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -726,13 +726,13 @@ function handleTambahKas(chatId, text, senderName, userId) {
         "💎 Saldo kantong: *" + fmtRp(hasil.saldo) + "*"
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handlePindahKas(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -755,13 +755,13 @@ function handlePindahKas(chatId, text, senderName, userId) {
         "Sisa " + hasil.dari + ": *" + fmtRp(hasil.saldoAsal) + "*"
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleTutupBuku(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -797,7 +797,7 @@ function handleTutupBuku(chatId, text, senderName, userId) {
         hasil.perKantong.map((d) => "• " + d.kode + ": " + fmtRp(d.saldo_akhir)).join("\n")
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 

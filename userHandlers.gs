@@ -52,20 +52,20 @@ function handleUntukWarga(chatId, text, senderName, userId) {
       "📋 *MENU WARGA*\n\n" +
       "`/kas` - Saldo kas total & per kantong\n" +
       "`/warga` - Jumlah KK & jiwa\n" +
-      "`/warga" + suffix + "` - Kartu KK & anggota\n" +
-      "`/tagihan" + suffix + "` - Tagihan KK Anda\n" +
-      "`/tunggakan" + suffix + "` - Tunggakan KK Anda\n" +
+      (kkCode ? "`/warga_" + kkCode + "` - Kartu KK & anggota\n" : "") +
+      (kkCode ? "`/tagihan_" + kkCode + "` - Tagihan KK Anda\n" : "") +
+      (kkCode ? "`/tunggakan_" + kkCode + "` - Tunggakan KK Anda\n" : "") +
       "`/pengumuman` - Pengumuman warga terbaru\n";
     const pesan = replyText.replace(/`/g, "");
     sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleUntukAdmin(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -95,7 +95,7 @@ function handleUntukAdmin(chatId, text, senderName, userId) {
     const pesan = replyText.replace(/`/g, "");
     sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -138,7 +138,7 @@ function handleWarga(chatId, text, senderName, userId) {
         teks +=
           "*Anggota:*\n" +
           (anggotaAktif.length
-            ? anggotaAktif.map((a) => "• " + escMd(a.nama) + " — " + escMd(a.hubungan)).join("\n")
+            ? anggotaAktif.map((a) => "• " + escMd(a.nama) + " — " + escMd(a.hubungan) + (a.tanggal_lahir ? " (" + formatTanggalMDY(a.tanggal_lahir) + ")" : "")).join("\n")
             : "• (belum ada data anggota)") +
           "\n\nKetik /tagihan atau /tunggakan untuk rincian iuran KK Anda.";
       } else if (admin || terhubung) {
@@ -193,7 +193,7 @@ function handleWarga(chatId, text, senderName, userId) {
       "\nKetik /daftar untuk rincian per KK.";
     sendTelegramMessage(chatId, reply, userId);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -259,7 +259,7 @@ function handleTagihan(chatId, text, senderName, userId) {
     }
     kirimTagihanKK(chatId, kk);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -337,7 +337,7 @@ function handleTunggakan(chatId, text, senderName, userId) {
           : "• Tidak ada tunggakan 🎉")
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -384,7 +384,7 @@ function handleGabung(chatId, text, senderName, userId, username) {
     );
     notifPengajuanAdmin(hasil, username, senderName);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -427,7 +427,7 @@ function handleSaya(chatId, text, senderName, userId) {
           : "\n\nMenunggu verifikasi pengurus.")
     );
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
@@ -492,13 +492,13 @@ function handleKas(chatId, text, senderName, userId) {
     cachePut(cacheKey, replyText, 60);
     sendTelegramMessage(chatId, replyText, userId);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 
 function handleSystem(chatId, text, senderName, userId) {
   if (!isAdminInti(userId)) {
-    tolakAdmin(chatId);
+    tolakAdmin(chatId, userId);
     return;
   }
   try {
@@ -513,7 +513,7 @@ function handleSystem(chatId, text, senderName, userId) {
     const pesan = replyText.replace(/`/g, "");
     sendTelegramMessage(chatId, pesan, userId);
   } catch (e) {
-    balasError(chatId, e);
+    balasError(chatId, e, userId);
   }
 }
 

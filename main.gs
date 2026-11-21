@@ -217,10 +217,19 @@ function handleCommand(chatId, text, senderName, userId, username) {
 }
 
 function processItem(chatId, text, senderName, userId, username) {
-  if (typeof global !== "undefined") global.CURRENT_USER_ID = userId;
-  if (typeof _G !== "undefined") _G.CURRENT_USER_ID = userId;
-  const cleanText = str(text);
-  const token = cleanText.split(/\s+/)[0].toLowerCase();
+  // userId diteruskan eksplisit ke sendTelegramMessage; tidak disimpan global.
+  let cleanText = str(text);
+  const rawToken = cleanText.split(/\s+/)[0].toLowerCase();
+  let token = rawToken;
+  if (rawToken.indexOf("_") >= 0) {
+    const parts = rawToken.split("_");
+    const baseCmd = parts[0];
+    const param = parts.slice(1).join("_");
+    const rest = cleanText.slice(rawToken.length).trim();
+    token = baseCmd;
+    const newRest = [param, rest].filter(Boolean).join(" ");
+    cleanText = token + (newRest ? " " + newRest : "");
+  }
   const handler = getPrefixHandlers()[token];
   if (handler) {
     handler(chatId, cleanText, senderName, userId, username);
