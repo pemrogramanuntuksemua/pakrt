@@ -30,6 +30,7 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 | `TarifIuran` | `berlaku_mulai, nominal, keterangan` |
 | `AlokasiIuran` | `kode, nama, nominal, sisa, keterangan` |
 | `Tagihan` | `periode, id_kk, no_rumah, nama_kk, nominal, status, tanggal_bayar, dicatat_oleh, catatan` |
+| `Pembayaran` | `id_bayar, tanggal, id_kk, periode, nominal, dicatat_oleh, catatan` |
 | `Kas` | `tanggal, keterangan, jenis, nominal, alokasi, ref, dicatat_oleh` |
 | `TutupBuku` | `periode, jenis, tarif, total_kk, total_jiwa, total_tagihan, total_terbayar, total_masuk, total_keluar, saldo_awal, saldo_akhir, ditutup_oleh, ditutup_pada` |
 | `TutupBukuAlokasi` | `periode, kode, saldo_awal, masuk, keluar, pindah_masuk, pindah_keluar, saldo_akhir` |
@@ -42,8 +43,9 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 - **Kepala keluarga** otomatis dibuat sebagai baris `Anggota` dengan `hubungan = Kepala Keluarga` saat `/tambahkk`. `jenis_kelamin` dan `tanggal_lahir` belum diisi; lengkapi lewat `/editanggota`.
 - **Tagihan per KK**, bukan per orang. Riwayat tarif disimpan di `TarifIuran.berlaku_mulai`; tarif berlaku = baris terbaru dengan periode ≤ periode tagihan.
 - **`Tagihan` adalah sumber kebenaran.** Baris historis tidak pernah dihitung ulang atau dihapus. Perubahan tarif hanya menyentuh tagihan berstatus `belum`; yang sudah `lunas` tidak diubah.
-- **Status tagihan:** `belum`, `lunas`, plus cadangan `bebas` dan `batal`. Tidak ada pembayaran sebagian.
-- **`/bayar` satu-satunya jalur pencatatan iuran.** Perintah ini mengubah `Tagihan` menjadi `lunas` dan menulis satu baris `Kas` per kantong dengan `ref = BYR-<YYYYMM>-<idKK tanpa tanda hubung>` (idempoten per `ref` + `alokasi`).
+- **Status tagihan:** `belum`, `sebagian`, `lunas`, plus cadangan `bebas` dan `batal`. `terbayar`/`sisa` adalah turunan dari tab `Pembayaran`; `nominal` di `Tagihan` tidak pernah diubah.
+- **`/bayar` satu-satunya jalur pencatatan iuran.** Setiap pembayaran menulis satu baris `Pembayaran` dan satu baris `Kas` `masuk` ke `kasrt` dengan `ref = BYR-<YYYYMM>-<idKK tanpa tanda hubung>` (cicilan berikutnya: `-02`, `-03`, …). Saat tagihan menjadi `lunas`, ditambahkan satu baris `pindah_keluar` dari `kasrt` dan satu baris `pindah_masuk` per kantong tetap dengan `ref` yang sama (idempoten per `ref` + `alokasi` + `jenis`).
+- **Pembayaran parsial diperbolehkan.** Tagihan 50.000 bisa dibayar 10.000 + 10.000 + 20.000 + 10.000. Status `sebagian` berubah otomatis menjadi `lunas` ketika total pembayaran mencapai `nominal`; pembayaran melebihi sisa ditolak. Tagihan yang sudah lunas sebelum fitur ini tetap dihitung lunas walau tidak punya baris `Pembayaran`.
 - **Kas multi-kantong.** Setiap kantong punya nominal tetap; tepat satu kantong bertanda `sisa = TRUE` menampung selisih. Kode kantong huruf kecil/angka, maksimal 8 karakter (default: `kasrt`, `dkmt`, `kamsih`).
 - **Baris `Kas` lama** tanpa `alokasi` dianggap masuk ke `kasrt` (lihat migrasi).
 - **Tutup buku** menyimpan snapshot `TutupBuku` + `TutupBukuAlokasi`. Jumlah saldo akhir semua kantong harus sama dengan saldo akhir total. Tutup buku tahunan ditolak sampai 12 bulan pada tahun itu ditutup.
@@ -72,13 +74,14 @@ Perintah ini **hanya dijalankan dari editor Apps Script**, tidak lewat menu, `on
 | `setupSheets({ mode: "safe" })` / `initSheets()` | Membuat tab yang belum ada, mengisi setting/tarif/alokasi awal. Data lama aman. |
 | `setupSheets({ mode: "reset", dryRun: true })` / `resetSheetSkemaDryRun()` | Melihat rencana reset tanpa mengubah apa pun. |
 | `setupSheets({ mode: "reset", backup: true })` / `resetSheetSkema()` | Backup seluruh file ke Drive, lalu hapus & buat ulang **sheet skema** saja. |
-| `setupSheets({ mode: "fresh", backup: true })` / `resetSemuaSheet()` | Sama seperti reset, tetapi juga menghapus `Kas` dan `Pengumuman`. |
+| `setupSheets({ mode: "fresh", backup: true })` / `resetSemuaSheet()` | Sama seperti reset, tetapi juga menghapus `Kas`, `Pembayaran`, dan `Pengumuman`. |
 
 - Mode `reset` / `fresh` selalu membuat backup ke Drive lebih dulu (`backup: false` hanya untuk keperluan uji).
 - Sheet skema yang dihapus saat reset: `Setting`, `Keluarga`, `Anggota`, `TarifIuran`, `AlokasiIuran`, `Tagihan`, `TutupBuku`, `TutupBukuAlokasi`, `TelegramUser`.
-- Data yang dipertahankan saat reset: `Kas`, `Pengumuman`, dan `Warga`/`Warga_lama`.
+- Data yang dipertahankan saat reset: `Kas`, `Pembayaran`, `Pengumuman`, dan `Warga`/`Warga_lama`.
 - `setupSheets` juga menerima `{ spreadsheet }` atau `{ spreadsheetId }`; `{ backfill: true }` langsung membuat tagihan dari `backfill_mulai` sampai bulan berjalan.
 - `backupSekarang()` membuat backup manual.
+- Spreadsheet yang sudah ada perlu menjalankan `initSheets()` sekali setelah deploy agar tab `Pembayaran` terbuat.
 
 ## Migrasi dari data lama
 
@@ -129,7 +132,7 @@ Jalankan berurutan dari editor:
 | `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD#Catatan` | Tambah anggota | `/tambahanggota KK-001#Rina#Istri#P#2010-05-01` |
 | `/editanggota id_kk#Nama#kolom=nilai` | Ubah data anggota (nama, hubungan, jk, lahir, status, catatan) | `/editanggota KK-001#Budi#jk=L#lahir=1990-01-01` |
 | `/tagihan <id_kk/no_rumah/nama>` | Rincian tagihan & tunggakan KK mana pun | `/tagihan KK-001` |
-| `/bayar id#periode1#periode2` | Catat iuran (satu-satunya jalur resmi) | `/bayar KK-001#2026-03#2026-04` |
+| `/bayar id#periode1[=nominal]#periode2[=nominal]` | Catat iuran (satu-satunya jalur resmi); tanpa nominal = bayar penuh/sisa | `/bayar KK-001#2026-03=10000#2026-04` |
 | `/tunggakan [id\|YYYY-MM]` | Ringkasan tunggakan (global atau per KK) | `/tunggakan` |
 | `/verifikasi <id_kk\|id_telegram>` | Setujui pengajuan keterkaitan akun | `/verifikasi KK-001` |
 | `/tolak <id_kk\|id_telegram>` | Tolak pengajuan keterkaitan akun | `/tolak 123456789` |
@@ -151,7 +154,7 @@ Catatan:
 - `/tambahwarga` sudah **diganti** (bukan alias) dan akan mengarahkan ke `/tambahkk` + `/tambahanggota`.
 - `/editanggota` mencari anggota berdasarkan `id_kk` + nama persis. Kolom yang didukung: `nama`, `hubungan`, `jk` (alias `jenis_kelamin`), `lahir` (alias `tanggal_lahir`), `status`, `catatan`. Gunakan `-` untuk mengosongkan tanggal lahir/catatan. Rename kepala keluarga otomatis menyinkronkan `Keluarga.nama_kk`.
 - Format lama `/tambahkas masuk#50000#Keterangan` akan ditolak dengan pesan perubahan format karena kantong wajib disebut.
-- Periode yang sudah ditutup bersifat read-only: `/bayar`, `/tambahkas`, `/pindahkas`, dan perubahan tarif ditolak. `/rekap` menandai periode tertutup dengan 🔒.
+- Periode yang sudah ditutup bersifat read-only untuk transaksi kas manual: `/tambahkas`, `/pindahkas`, dan perubahan tarif ditolak. `/bayar` tetap bisa melunasi **tagihan yang sudah ada** pada periode tertutup; baris kas dicatat tanggal hari ini sehingga snapshot `TutupBuku` tidak berubah. Sisa tagihan tetap dihitung sebagai tunggakan. `/rekap` menandai periode tertutup dengan 🔒 dan memakai angka snapshot `TutupBuku` bila tersedia.
 - Admin tambahan punya akses perintah pengurus yang sama, tetapi hanya admin inti (`ADMIN_IDS`) yang bisa menambah/menghapusnya. `/set admin_tambahan` sengaja ditolak dan diarahkan ke `/admin`.
 
 ## Keterkaitan akun Telegram ↔ KK
@@ -223,10 +226,27 @@ Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.
    - Otomatis saat `/bayar`, `/rekap`, atau `/tutupbuku`
    - Manual massal: jalankan `backfillTagihanBulanan()` di editor, atau `setupSheets({ backfill: true })`
 5. Cek tagihan: `/tagihan <id_kk>` atau `/tunggakan`
-6. Bayar iuran: `/bayar id_kk#periode1#periode2`
+6. Bayar iuran: `/bayar id_kk#periode1[=nominal]#periode2[=nominal]`
 7. Tutup buku: `/tutupbuku YYYY-MM` (mengunci periode)
 
 Catatan: KK harus terdaftar dulu. Tagihan dibuat per KK berdasarkan tarif aktif.
+
+### Pembayaran parsial
+
+Tagihan 50.000 dapat dicicil, misalnya:
+
+```
+/bayar KK-001#2026-03=10000
+/bayar KK-001#2026-03=10000
+/bayar KK-001#2026-03=20000
+/bayar KK-001#2026-03=10000
+```
+
+- Setiap cicilan masuk ke `kasrt` dan menambah baris `Pembayaran`. Status tagihan `sebagian`; sisa 40.000, 30.000, 10.000, lalu 0.
+- Saat pembayaran terakhir melunasi tagihan, `kasrt` dipindahkan ke kantong tetap (default `dkmt` 5.000 dan `kamsih` 40.000). Saldo akhir dari tagihan ini: `kasrt` 5.000, `dkmt` 5.000, `kamsih` 40.000—sama seperti bayar penuh sekaligus.
+- `/bayar KK-001#2026-03` tanpa `=nominal` membayar seluruh sisa tagihan tersebut.
+- Multiperiode boleh, tetapi nominal harus ditulis per periode, mis. `/bayar KK-001#2026-03=10000#2026-04=50000`.
+- Cicilan untuk periode yang sudah ditutup diperbolehkan dan dicatat pada tanggal saat ini; snapshot `TutupBuku` periode lama tidak diubah, sedangkan `Tunggakan`/`Rekap` mengikuti sisa terbaru (rekap periode tertutup memakai snapshot bila tersedia).
 
 ## E2E manual (opsional)
 

@@ -989,19 +989,34 @@ function hitungPembagian(nominal) {
 }
 
 function getTagihan() {
+  const dibayar = {};
+  getPembayaran().forEach((b) => {
+    const kunci = str(b.id_kk).toUpperCase() + "|" + b.periode.toUpperCase();
+    dibayar[kunci] = (dibayar[kunci] || 0) + b.nominal;
+  });
   return bacaTabel(SHEET_TAGIHAN).rows
-    .map((t) => ({
-      periode: str(t.periode),
-      id_kk: str(t.id_kk),
-      no_rumah: str(t.no_rumah),
-      nama_kk: str(t.nama_kk),
-      nominal: parseAngka(t.nominal),
-      status: str(t.status).toLowerCase() || TAGIHAN_BELUM,
-      tanggal_bayar: t.tanggal_bayar,
-      dicatat_oleh: str(t.dicatat_oleh),
-      catatan: str(t.catatan),
-      _row: t._row,
-    }))
+    .map((t) => {
+      const status = str(t.status).toLowerCase() || TAGIHAN_BELUM;
+      const nominal = parseAngka(t.nominal);
+      const kunci = str(t.id_kk).toUpperCase() + "|" + str(t.periode).toUpperCase();
+      const dariLedger = dibayar[kunci] || 0;
+      // Tagihan lunas sebelum fitur cicilan tidak punya baris di Pembayaran.
+      const terbayar = dariLedger > 0 ? dariLedger : (status === TAGIHAN_LUNAS ? nominal : 0);
+      return {
+        periode: str(t.periode),
+        id_kk: str(t.id_kk),
+        no_rumah: str(t.no_rumah),
+        nama_kk: str(t.nama_kk),
+        nominal: nominal,
+        status: status,
+        terbayar: terbayar,
+        sisa: Math.max(0, nominal - terbayar),
+        tanggal_bayar: t.tanggal_bayar,
+        dicatat_oleh: str(t.dicatat_oleh),
+        catatan: str(t.catatan),
+        _row: t._row,
+      };
+    })
     .filter((t) => t.periode && t.id_kk);
 }
 
@@ -1077,17 +1092,17 @@ function hitungTunggakanKK(idKK, sampaiPeriode) {
     .filter(
       (t) =>
         t.id_kk === str(idKK) &&
-        t.status === TAGIHAN_BELUM &&
+        tagihanBelumLunas(t) &&
         bandingPeriode(t.periode, batas) <= 0
     )
-    .reduce((total, t) => total + t.nominal, 0);
+    .reduce((total, t) => total + t.sisa, 0);
 }
 
 function hitungTunggakan(sampaiPeriode) {
   const batas = str(sampaiPeriode) || periodeSekarang();
   return getTagihan()
-    .filter((t) => t.status === TAGIHAN_BELUM && bandingPeriode(t.periode, batas) <= 0)
-    .reduce((total, t) => total + t.nominal, 0);
+    .filter((t) => tagihanBelumLunas(t) && bandingPeriode(t.periode, batas) <= 0)
+    .reduce((total, t) => total + t.sisa, 0);
 }
 
 function getBulanTunggakanKK(idKK, sampaiPeriode) {
@@ -1095,7 +1110,7 @@ function getBulanTunggakanKK(idKK, sampaiPeriode) {
   return getTagihan().filter(
     (t) =>
       t.id_kk === str(idKK) &&
-      t.status === TAGIHAN_BELUM &&
+      tagihanBelumLunas(t) &&
       bandingPeriode(t.periode, batas) <= 0
   ).length;
 }
@@ -1110,76 +1125,211 @@ function kasRefAda(ref, kode) {
   return getKas().some((j) => j.ref === r && j.alokasi === k);
 }
 
-function catatPembayaran(keluarga, periodeList, oleh) {
+function kasRefJenisAda(ref, kode, jenis) {
+  const r = str(ref);
+  const k = str(kode).toLowerCase();
+  const j = str(jenis).toLowerCase();
+  return getKas().some((x) => x.ref === r && x.alokasi === k && x.jenis === j);
+}
+
+function getPembayaran() {
+  return bacaTabel(SHEET_PEMBAYARAN).rows
+    .map((b) => ({
+      id_bayar: str(b.id_bayar),
+      tanggal: parseTanggal(b.tanggal),
+      id_kk: str(b.id_kk),
+      periode: str(b.periode),
+      nominal: parseAngka(b.nominal),
+      dicatat_oleh: str(b.dicatat_oleh),
+      catatan: str(b.catatan),
+      _row: b._row,
+    }))
+    .filter((b) => b.id_bayar && b.id_kk && b.periode && b.nominal);
+}
+
+function idPembayaranBaru(periode, idKK) {
+  const dasar = refPembayaran(periode, idKK);
+  const jumlah = getPembayaran().filter(
+    (b) => str(b.id_kk).toUpperCase() === str(idKK).toUpperCase() && b.periode === str(periode)
+  ).length;
+  if (!jumlah) return dasar;
+  const urut = jumlah + 1;
+  return dasar + "-" + (urut < 10 ? "0" : "") + urut;
+}
+
+function tagihanBelumLunas(t) {
+  return t && (t.status === TAGIHAN_BELUM || t.status === TAGIHAN_SEBAGIAN);
+}
+
+function catatPembayaran(keluarga, periodeList, oleh, opsi) {
   const kk = keluarga || {};
   if (!kk.id_kk) throw new Error("Data KK tidak valid.");
-  const periods = [];
-  (periodeList && periodeList.length ? periodeList : [periodeSekarang()]).forEach((p) => {
-    const pp = parsePeriode(p);
-    if (!pp || !pp.bulanan) throw new Error("Periode tidak valid: " + p);
-    if (periods.indexOf(pp.periode) < 0) periods.push(pp.periode);
-  });
-  periods.forEach((p) => {
-    if (isPeriodeTertutup(p)) throw new Error("Periode " + p + " sudah ditutup.");
-    if (bandingPeriode(p, periodeSekarang()) > 0) {
-      throw new Error("Tidak bisa membayar periode masa depan: " + p);
+  const o = opsi || {};
+  const jumlahPerPeriode = o.jumlah || {};
+  const lock = typeof LockService !== "undefined" && LockService.getScriptLock
+    ? LockService.getScriptLock()
+    : null;
+  if (lock) {
+    if (typeof lock.waitLock === "function") lock.waitLock(10000);
+    else if (typeof lock.tryLock === "function" && !lock.tryLock()) {
+      throw new Error("Pembayaran sedang diproses. Coba lagi sebentar.");
     }
-    pastikanTagihan(p);
-  });
-  const target = periods.map((p) => {
-    const t = cariTagihan(kk.id_kk, p);
-    if (!t) {
-      const tersedia = getTagihan()
-        .filter((x) => str(x.id_kk).toUpperCase() === str(kk.id_kk).toUpperCase())
-        .map((x) => str(x.periode))
-        .filter(Boolean);
-      const uniq = Array.from(new Set(tersedia));
-      throw new Error(
-        "KK " + kk.id_kk + " tidak ditagih pada " + p +
-        ". Tersedia: " + (uniq.length ? uniq.join(", ") : "-") + "."
-      );
-    }
-    if (t.status === TAGIHAN_LUNAS) {
-      throw new Error("Tagihan " + kk.id_kk + " periode " + p + " sudah lunas.");
-    }
-    if (t.status !== TAGIHAN_BELUM) {
-      throw new Error("Tagihan " + p + " berstatus '" + t.status + "' dan tidak bisa dibayar.");
-    }
-    return { periode: p, tagihan: t };
-  });
-  const detail = target.map((x) => ({
-    periode: x.periode,
-    nominal: x.tagihan.nominal,
-    pembagian: hitungPembagian(x.tagihan.nominal),
-  }));
-  target.forEach((x) => {
-    setSel(SHEET_TAGIHAN, x.tagihan._row, "status", TAGIHAN_LUNAS);
-    setSel(SHEET_TAGIHAN, x.tagihan._row, "tanggal_bayar", new Date());
-    setSel(SHEET_TAGIHAN, x.tagihan._row, "dicatat_oleh", str(oleh));
-  });
-  const kasBaru = [];
-  detail.forEach((d) => {
-    const ref = refPembayaran(d.periode, kk.id_kk);
-    d.pembagian.forEach((b) => {
-      if (kasRefAda(ref, b.kode)) return;
-      tambahBaris(SHEET_KAS, {
-        tanggal: new Date(),
-        keterangan: "Iuran " + d.periode + " - " + kk.nama_kk + " (" + kk.id_kk + ")",
-        jenis: JENIS_MASUK,
-        nominal: b.nominal,
-        alokasi: b.kode,
-        ref: ref,
-        dicatat_oleh: str(oleh),
-      });
-      kasBaru.push({ periode: d.periode, kode: b.kode, nominal: b.nominal });
+  }
+  try {
+    const periods = [];
+    (periodeList && periodeList.length ? periodeList : [periodeSekarang()]).forEach((p) => {
+      const pp = parsePeriode(p);
+      if (!pp || !pp.bulanan) throw new Error("Periode tidak valid: " + p);
+      if (periods.indexOf(pp.periode) < 0) periods.push(pp.periode);
     });
-  });
-  return {
-    periode: periods,
-    detail: detail,
-    kasBaru: kasBaru,
-    total: detail.reduce((total, d) => total + d.nominal, 0),
-  };
+    periods.forEach((p) => {
+      if (bandingPeriode(p, periodeSekarang()) > 0) {
+        throw new Error("Tidak bisa membayar periode masa depan: " + p);
+      }
+      // Periode tertutup tidak membuat tagihan baru, tetapi tagihan lama boleh dilunasi.
+      pastikanTagihan(p);
+    });
+    const alokasi = validasiAlokasi();
+    const daftarTujuan = alokasi.list.filter(
+      (a) => !a.sisa && a.nominal > 0 && a.kode !== ALOKASI_DEFAULT_KODE
+    );
+    const totalTransfer = daftarTujuan.reduce((total, a) => total + a.nominal, 0);
+    let saldoKasrtProyeksi = getSaldoKantong(ALOKASI_DEFAULT_KODE);
+    const target = periods.map((p) => {
+      const t = cariTagihan(kk.id_kk, p);
+      if (!t) {
+        const tersedia = getTagihan()
+          .filter((x) => str(x.id_kk).toUpperCase() === str(kk.id_kk).toUpperCase())
+          .map((x) => str(x.periode))
+          .filter(Boolean);
+        const uniq = Array.from(new Set(tersedia));
+        throw new Error(
+          "KK " + kk.id_kk + " tidak ditagih pada " + p +
+          ". Tersedia: " + (uniq.length ? uniq.join(", ") : "-") + "."
+        );
+      }
+      if (t.status === TAGIHAN_LUNAS) {
+        throw new Error("Tagihan " + kk.id_kk + " periode " + p + " sudah lunas.");
+      }
+      if (!tagihanBelumLunas(t)) {
+        throw new Error("Tagihan " + p + " berstatus '" + t.status + "' dan tidak bisa dibayar.");
+      }
+      const diminta = jumlahPerPeriode[p] === undefined ? t.sisa : Math.round(Number(jumlahPerPeriode[p]));
+      if (!isFinite(diminta) || diminta <= 0) {
+        throw new Error("Nominal pembayaran " + p + " harus angka > 0.");
+      }
+      if (diminta > t.sisa) {
+        throw new Error(
+          "Pembayaran " + p + " melebihi sisa tagihan (" + fmtRp(t.sisa) + ")."
+        );
+      }
+      const sisaSesudah = Math.max(0, t.sisa - diminta);
+      const statusBaru = sisaSesudah > 0 ? TAGIHAN_SEBAGIAN : TAGIHAN_LUNAS;
+      if (statusBaru === TAGIHAN_LUNAS) {
+        saldoKasrtProyeksi += diminta;
+        if (saldoKasrtProyeksi < totalTransfer) {
+          throw new Error(
+            "Saldo " + ALOKASI_DEFAULT_KODE + " tidak cukup untuk alokasi tetap (" +
+            fmtRp(totalTransfer) + ")."
+          );
+        }
+      }
+      return {
+        periode: p,
+        tagihan: t,
+        nominal: diminta,
+        sisaSebelum: t.sisa,
+        sisaSesudah: sisaSesudah,
+        statusBaru: statusBaru,
+      };
+    });
+    const pembayaranBaru = [];
+    const kasBaru = [];
+    const detail = [];
+    target.forEach((x) => {
+      const sekarang = new Date();
+      const ref = idPembayaranBaru(x.periode, kk.id_kk);
+      const catatan = str(o.catatan) ||
+        (x.statusBaru === TAGIHAN_LUNAS ? "Pelunasan" : "Cicilan");
+      tambahBaris(SHEET_PEMBAYARAN, {
+        id_bayar: ref,
+        tanggal: sekarang,
+        id_kk: kk.id_kk,
+        periode: x.periode,
+        nominal: x.nominal,
+        dicatat_oleh: str(oleh),
+        catatan: catatan,
+      });
+      pembayaranBaru.push({
+        periode: x.periode,
+        id_bayar: ref,
+        nominal: x.nominal,
+        sisa: x.sisaSesudah,
+      });
+      setSel(SHEET_TAGIHAN, x.tagihan._row, "status", x.statusBaru);
+      setSel(SHEET_TAGIHAN, x.tagihan._row, "dicatat_oleh", str(oleh));
+      if (x.statusBaru === TAGIHAN_LUNAS) {
+        setSel(SHEET_TAGIHAN, x.tagihan._row, "tanggal_bayar", sekarang);
+      }
+      const keterangan = "Iuran " + x.periode + " - " + kk.nama_kk + " (" + kk.id_kk + ")";
+      if (!kasRefJenisAda(ref, ALOKASI_DEFAULT_KODE, JENIS_MASUK)) {
+        tambahBaris(SHEET_KAS, {
+          tanggal: sekarang,
+          keterangan: keterangan,
+          jenis: JENIS_MASUK,
+          nominal: x.nominal,
+          alokasi: ALOKASI_DEFAULT_KODE,
+          ref: ref,
+          dicatat_oleh: str(oleh),
+        });
+        kasBaru.push({ periode: x.periode, kode: ALOKASI_DEFAULT_KODE, nominal: x.nominal, jenis: JENIS_MASUK });
+      }
+      if (x.statusBaru === TAGIHAN_LUNAS && totalTransfer > 0) {
+        if (!kasRefJenisAda(ref, ALOKASI_DEFAULT_KODE, JENIS_PINDAH_KELUAR)) {
+          tambahBaris(SHEET_KAS, {
+            tanggal: sekarang,
+            keterangan: keterangan + " (alokasi)",
+            jenis: JENIS_PINDAH_KELUAR,
+            nominal: totalTransfer,
+            alokasi: ALOKASI_DEFAULT_KODE,
+            ref: ref,
+            dicatat_oleh: str(oleh),
+          });
+          kasBaru.push({ periode: x.periode, kode: ALOKASI_DEFAULT_KODE, nominal: totalTransfer, jenis: JENIS_PINDAH_KELUAR });
+        }
+        daftarTujuan.forEach((a) => {
+          if (kasRefJenisAda(ref, a.kode, JENIS_PINDAH_MASUK)) return;
+          tambahBaris(SHEET_KAS, {
+            tanggal: sekarang,
+            keterangan: keterangan + " (alokasi)",
+            jenis: JENIS_PINDAH_MASUK,
+            nominal: a.nominal,
+            alokasi: a.kode,
+            ref: ref,
+            dicatat_oleh: str(oleh),
+          });
+          kasBaru.push({ periode: x.periode, kode: a.kode, nominal: a.nominal, jenis: JENIS_PINDAH_MASUK });
+        });
+      }
+      detail.push({
+        periode: x.periode,
+        nominal: x.nominal,
+        sisa: x.sisaSesudah,
+        status: x.statusBaru,
+        pembagian: [{ kode: ALOKASI_DEFAULT_KODE, nama: "Kas RT", nominal: x.nominal }],
+      });
+    });
+    return {
+      periode: periods,
+      detail: detail,
+      pembayaranBaru: pembayaranBaru,
+      kasBaru: kasBaru,
+      total: detail.reduce((total, d) => total + d.nominal, 0),
+      sisa: detail.reduce((total, d) => total + d.sisa, 0),
+    };
+  } finally {
+    if (lock && typeof lock.releaseLock === "function") lock.releaseLock();
+  }
 }
 
 function getKas() {
@@ -1463,7 +1613,7 @@ function hitungRekapPeriode(periode) {
   const p = str(periode);
   const rows = getTagihanPeriode(p).filter((t) => t.status !== TAGIHAN_BATAL);
   const terbayar = rows.filter((t) => t.status === TAGIHAN_LUNAS);
-  const belum = rows.filter((t) => t.status === TAGIHAN_BELUM);
+  const belum = rows.filter(tagihanBelumLunas);
   const bebas = rows.filter((t) => t.status === TAGIHAN_BEBAS);
   const ids = [];
   rows.forEach((t) => {
@@ -1477,8 +1627,8 @@ function hitungRekapPeriode(periode) {
     belumKK: belum.length,
     dibebaskan: bebas.length,
     totalTagihan: rows.reduce((t, r) => t + r.nominal, 0),
-    terbayar: terbayar.reduce((t, r) => t + r.nominal, 0),
-    tunggakan: belum.reduce((t, r) => t + r.nominal, 0),
+    terbayar: rows.reduce((t, r) => t + r.terbayar, 0),
+    tunggakan: belum.reduce((t, r) => t + r.sisa, 0),
     totalJiwa: getJumlahJiwaUntukIds(ids),
   };
 }
@@ -1649,13 +1799,13 @@ function hitungRekapRentang(dari, sampai) {
   if (periodeList.length > 24) throw new Error("Rentang maksimal 24 bulan.");
   const perPeriode = periodeList.map((p) => {
     pastikanTagihan(p);
-    return hitungRekapPeriode(p);
+    return rekapEfektif(p);
   });
   const penunggak = {};
   getTagihan()
     .filter(
       (t) =>
-        t.status === TAGIHAN_BELUM &&
+        tagihanBelumLunas(t) &&
         bandingPeriode(t.periode, a.periode) >= 0 &&
         bandingPeriode(t.periode, b.periode) <= 0
     )
@@ -1669,7 +1819,7 @@ function hitungRekapRentang(dari, sampai) {
           bulan: 0,
         };
       }
-      penunggak[t.id_kk].total += t.nominal;
+      penunggak[t.id_kk].total += t.sisa;
       penunggak[t.id_kk].bulan += 1;
     });
   const daftarPenunggak = Object.keys(penunggak)
@@ -1801,16 +1951,20 @@ function kirimTagihanKK(chatId, kk) {
     return;
   }
   const tunggakan = rows
-    .filter((t) => t.status === TAGIHAN_BELUM)
-    .reduce((total, t) => total + t.nominal, 0);
-  const belumPertama = rows.filter((t) => t.status === TAGIHAN_BELUM)[0];
+    .filter(tagihanBelumLunas)
+    .reduce((total, t) => total + t.sisa, 0);
+  const belumPertama = rows.filter(tagihanBelumLunas)[0];
   const daftar = rows.slice(-24).map((t) => {
     const tanda =
       t.status === TAGIHAN_LUNAS ? "✅" :
+      t.status === TAGIHAN_SEBAGIAN ? "🟡" :
       t.status === TAGIHAN_BEBAS ? "🕊️" :
       t.status === TAGIHAN_BATAL ? "✖️" : "⏳";
     return (
       "• " + t.periode + "  " + tanda + " " + padKiri(fmtRp(t.nominal), 12) +
+      (t.status === TAGIHAN_SEBAGIAN
+        ? "  (bayar " + fmtRp(t.terbayar) + " · sisa " + fmtRp(t.sisa) + ")"
+        : "") +
       (t.tanggal_bayar ? "  (" + formatTanggalTagihan(t.tanggal_bayar) + ")" : "")
     );
   });
@@ -1821,22 +1975,26 @@ function kirimTagihanKK(chatId, kk) {
       daftar.join("\n") +
       "\n\n⏳ Total tunggakan: *" + fmtRp(tunggakan) + "*\n" +
       (belumPertama
-        ? "Ketik `/bayar " + kk.id_kk + " " + belumPertama.periode + "` untuk mencatat pembayaran."
+        ? "Ketik `/bayar " + kk.id_kk + "#" + belumPertama.periode + "=" + belumPertama.sisa +
+          "` untuk mencatat pembayaran (boleh dicicil)."
         : "Semua tagihan sudah lunas ✅")
   );
 }
 
 function kirimTunggakanKK(chatId, kk) {
   const rows = getTagihan()
-    .filter((t) => t.id_kk === kk.id_kk && t.status === TAGIHAN_BELUM)
+    .filter((t) => t.id_kk === kk.id_kk && tagihanBelumLunas(t))
     .sort((a, b) => bandingPeriode(a.periode, b.periode));
-  const total = rows.reduce((t, r) => t + r.nominal, 0);
+  const total = rows.reduce((t, r) => t + r.sisa, 0);
   sendTelegramMessage(
     chatId,
     "⏳ *TUNGGAKAN " + kk.id_kk + "*\n" +
       "👤 " + escMd(kk.nama_kk) + " · 🏠 " + escMd(kk.no_rumah) + "\n\n" +
       (rows.length
-        ? rows.map((t) => "• " + t.periode + " — " + fmtRp(t.nominal)).join("\n")
+        ? rows.map((t) =>
+            "• " + t.periode + " — " + fmtRp(t.sisa) +
+            (t.status === TAGIHAN_SEBAGIAN ? " (dari " + fmtRp(t.nominal) + ")" : "")
+          ).join("\n")
         : "• Tidak ada tunggakan 🎉") +
       "\n\nTotal: *" + fmtRp(total) + "*"
   );
@@ -1860,10 +2018,10 @@ function ringkasanKkTerhubung(chatId, daftarKk) {
 function penunggakPeriode(periode, limit) {
   const map = {};
   getTagihanPeriode(periode)
-    .filter((t) => t.status === TAGIHAN_BELUM)
+    .filter(tagihanBelumLunas)
     .forEach((t) => {
       if (!map[t.id_kk]) map[t.id_kk] = { id_kk: t.id_kk, nama: t.nama_kk, no: t.no_rumah, total: 0, bulan: 0 };
-      map[t.id_kk].total += t.nominal;
+      map[t.id_kk].total += t.sisa;
       map[t.id_kk].bulan += 1;
     });
   return Object.keys(map)
@@ -1872,24 +2030,40 @@ function penunggakPeriode(periode, limit) {
     .slice(0, limit || 5);
 }
 
+function rekapEfektif(periode) {
+  const r = hitungRekapPeriode(periode);
+  const snap = getTutupBuku().filter(
+    (t) => t.jenis === "bulan" && t.periode === str(periode) && t.total_tagihan > 0
+  )[0];
+  if (!snap) return r;
+  r.totalTagihan = snap.total_tagihan;
+  r.terbayar = snap.total_terbayar;
+  r.tunggakan = Math.max(0, snap.total_tagihan - snap.total_terbayar);
+  r.dariSnapshot = true;
+  return r;
+}
+
 function formatRekapBulanan(r) {
-  const persen = r.totalTagihan > 0 ? Math.round((r.terbayar / r.totalTagihan) * 100) : 0;
-  const top = penunggakPeriode(r.periode, 5);
-  const terkunci = isPeriodeTertutup(r.periode);
+  const e = rekapEfektif(r.periode);
+  const persen = e.totalTagihan > 0 ? Math.round((e.terbayar / e.totalTagihan) * 100) : 0;
+  const top = e.dariSnapshot ? [] : penunggakPeriode(e.periode, 5);
+  const terkunci = isPeriodeTertutup(e.periode);
   return (
-    "📊 *REKAP IURAN — " + labelPeriode(r.periode).toUpperCase() + "*" + (terkunci ? " 🔒" : "") + "\n\n" +
-    "🎯 Target: *" + fmtRp(r.totalTagihan) + "*  (" + r.totalKK + " KK × " + fmtRp(r.tarif) + ")\n" +
-    "✅ Terbayar: *" + fmtRp(r.terbayar) + "*  (" + r.lunasKK + " KK · " + persen + "%)\n" +
-    "⏳ Tunggakan: *" + fmtRp(r.tunggakan) + "*  (" + r.belumKK + " KK)\n" +
-    "👥 Jiwa terdampak: " + r.totalJiwa + " orang\n" +
-    (r.dibebaskan ? "🕊️ Dibebaskan: " + r.dibebaskan + " KK\n" : "") +
+    "📊 *REKAP IURAN — " + labelPeriode(e.periode).toUpperCase() + "*" + (terkunci ? " 🔒" : "") + "\n\n" +
+    "🎯 Target: *" + fmtRp(e.totalTagihan) + "*  (" + e.totalKK + " KK × " + fmtRp(e.tarif) + ")\n" +
+    "✅ Terbayar: *" + fmtRp(e.terbayar) + "*  (" + e.lunasKK + " KK · " + persen + "%)\n" +
+    "⏳ Tunggakan: *" + fmtRp(e.tunggakan) + "*  (" + e.belumKK + " KK)\n" +
+    "👥 Jiwa terdampak: " + e.totalJiwa + " orang\n" +
+    (e.dibebaskan ? "🕊️ Dibebaskan: " + e.dibebaskan + " KK\n" : "") +
     "\nProgres: " + progressBar(persen) + " " + persen + "%\n\n" +
     "*Penunggak teratas:*\n" +
-    (top.length
-      ? top.map(
-          (d) => "• " + d.id_kk + " " + escMd(d.no) + " " + escMd(d.nama) + " — " + fmtRp(d.total)
-        ).join("\n")
-      : "• Tidak ada 🎉")
+    (e.dariSnapshot
+      ? "• Mengikuti snapshot TutupBuku (periode tertutup).\n"
+      : top.length
+        ? top.map(
+            (d) => "• " + d.id_kk + " " + escMd(d.no) + " " + escMd(d.nama) + " — " + fmtRp(d.total)
+          ).join("\n")
+        : "• Tidak ada 🎉")
   );
 }
 
@@ -2376,7 +2550,7 @@ function terapkanSchema(sheet, nama) {
     Setting: { kolom: "tipe", daftar: ["angka", "boolean", "teks"] },
     Keluarga: { kolom: "status", daftar: ["Aktif", "Pindah", "Nonaktif"] },
     Anggota: { kolom: "status", daftar: ["Aktif", "Pindah", "Meninggal"] },
-    Tagihan: { kolom: "status", daftar: ["belum", "lunas", "bebas", "batal"] },
+    Tagihan: { kolom: "status", daftar: ["belum", "sebagian", "lunas", "bebas", "batal"] },
     Kas: { kolom: "jenis", daftar: ["masuk", "keluar", "pindah_masuk", "pindah_keluar"] },
   };
   const aturan = validasi[nama];
@@ -2658,6 +2832,10 @@ if (typeof module !== "undefined" && module.exports) {
         getBulanTunggakanKK,
         refPembayaran,
         kasRefAda,
+        kasRefJenisAda,
+        getPembayaran,
+        idPembayaranBaru,
+        tagihanBelumLunas,
         catatPembayaran,
         getKas,
         efekKas,
@@ -2674,6 +2852,7 @@ if (typeof module !== "undefined" && module.exports) {
         daftarKodeKantong,
         hitungKasPeriode,
         hitungRekapPeriode,
+        rekapEfektif,
         tutupBuku,
         tutupBukuBulanan,
         tutupBukuTahunan,

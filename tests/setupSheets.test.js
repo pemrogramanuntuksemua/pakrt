@@ -2,6 +2,7 @@ const { pakrt, buatSheet } = require("./helpers/fixtures");
 const { setSpreadsheet, createMockSheet } = require("./helpers/mockSheet");
 
 const SKEMA = ["Setting", "Keluarga", "Anggota", "TarifIuran", "AlokasiIuran", "Tagihan", "TutupBuku", "TutupBukuAlokasi", "TelegramUser"];
+const SKEMA_SAFE = SKEMA.concat(["Pembayaran"]);
 
 function pasangBackup() {
   const calls = [];
@@ -126,7 +127,7 @@ describe("setupSheets", () => {
     const ss = buatSpreadsheet();
     const hasil = pakrt.setupSheets({ spreadsheet: ss, mode: "safe", dryRun: true });
     expect(hasil.akanHapus).toEqual([]);
-    expect(hasil.akanBuat.sort()).toEqual(SKEMA.slice().sort());
+    expect(hasil.akanBuat.sort()).toEqual(SKEMA_SAFE.slice().sort());
   });
 
   test("mode tidak dikenal ditolak", () => {

@@ -16,6 +16,7 @@ const SHEET_TARIF = "TarifIuran";
 const SHEET_ALOKASI = "AlokasiIuran";
 const SHEET_TAGIHAN = "Tagihan";
 const SHEET_KAS = "Kas";
+const SHEET_PEMBAYARAN = "Pembayaran";
 const SHEET_TUTUP_BUKU = "TutupBuku";
 const SHEET_TUTUP_BUKU_ALOKASI = "TutupBukuAlokasi";
 const SHEET_PENGUMUMAN = "Pengumuman";
@@ -29,6 +30,7 @@ const SHEET_SCHEMA = {
   AlokasiIuran: ["kode", "nama", "nominal", "sisa", "keterangan"],
   Tagihan: ["periode", "id_kk", "no_rumah", "nama_kk", "nominal", "status", "tanggal_bayar", "dicatat_oleh", "catatan"],
   Kas: ["tanggal", "keterangan", "jenis", "nominal", "alokasi", "ref", "dicatat_oleh"],
+  Pembayaran: ["id_bayar", "tanggal", "id_kk", "periode", "nominal", "dicatat_oleh", "catatan"],
   TutupBuku: ["periode", "jenis", "tarif", "total_kk", "total_jiwa", "total_tagihan", "total_terbayar", "total_masuk", "total_keluar", "saldo_awal", "saldo_akhir", "ditutup_oleh", "ditutup_pada"],
   TutupBukuAlokasi: ["periode", "kode", "saldo_awal", "masuk", "keluar", "pindah_masuk", "pindah_keluar", "saldo_akhir"],
   TelegramUser: ["id_telegram", "username", "nama", "id_kk", "peran", "status", "diminta_pada", "diverifikasi_oleh", "diverifikasi_pada"],
@@ -42,7 +44,7 @@ const SHEET_SKEMA = [
 ];
 
 // Sheet data yang dipertahankan saat "reset", hanya dihapus pada "fresh"
-const SHEET_DATA = [SHEET_KAS, SHEET_PENGUMUMAN];
+const SHEET_DATA = [SHEET_KAS, SHEET_PEMBAYARAN, SHEET_PENGUMUMAN];
 
 const CMD_START = "/start";
 const CMD_KAS = "/kas";
@@ -77,6 +79,7 @@ const CMD_CABUT = "/cabut";
 const CMD_CABUTKK = "/cabutkk";
 
 const TAGIHAN_BELUM = "belum";
+const TAGIHAN_SEBAGIAN = "sebagian";
 const TAGIHAN_LUNAS = "lunas";
 const TAGIHAN_BEBAS = "bebas";
 const TAGIHAN_BATAL = "batal";
@@ -266,6 +269,7 @@ if (typeof module !== "undefined" && module.exports) {
         global.SHEET_ALOKASI = SHEET_ALOKASI;
         global.SHEET_TAGIHAN = SHEET_TAGIHAN;
         global.SHEET_KAS = SHEET_KAS;
+        global.SHEET_PEMBAYARAN = SHEET_PEMBAYARAN;
         global.SHEET_TUTUP_BUKU = SHEET_TUTUP_BUKU;
         global.SHEET_TUTUP_BUKU_ALOKASI = SHEET_TUTUP_BUKU_ALOKASI;
         global.SHEET_PENGUMUMAN = SHEET_PENGUMUMAN;
@@ -274,6 +278,7 @@ if (typeof module !== "undefined" && module.exports) {
         global.SHEET_SKEMA = SHEET_SKEMA;
         global.SHEET_DATA = SHEET_DATA;
         global.TAGIHAN_BELUM = TAGIHAN_BELUM;
+        global.TAGIHAN_SEBAGIAN = TAGIHAN_SEBAGIAN;
         global.TAGIHAN_LUNAS = TAGIHAN_LUNAS;
         global.TAGIHAN_BEBAS = TAGIHAN_BEBAS;
         global.TAGIHAN_BATAL = TAGIHAN_BATAL;
@@ -321,9 +326,9 @@ if (typeof module !== "undefined" && module.exports) {
         SPREADSHEET_ID, TELEGRAM_TOKEN, WEBHOOK_URL, GROUP_CHAT_ID,
         ADMIN_IDS,
         DEFAULT_SETTINGS, DEFAULT_ALOKASI,
-        SHEET_SETTING, SHEET_KELUARGA, SHEET_ANGGOTA, SHEET_TARIF, SHEET_ALOKASI, SHEET_TAGIHAN, SHEET_KAS, SHEET_TUTUP_BUKU, SHEET_TUTUP_BUKU_ALOKASI, SHEET_PENGUMUMAN, SHEET_TELEGRAM_USER, SHEET_SCHEMA, SHEET_SKEMA, SHEET_DATA,
+        SHEET_SETTING, SHEET_KELUARGA, SHEET_ANGGOTA, SHEET_TARIF, SHEET_ALOKASI, SHEET_TAGIHAN, SHEET_KAS, SHEET_PEMBAYARAN, SHEET_TUTUP_BUKU, SHEET_TUTUP_BUKU_ALOKASI, SHEET_PENGUMUMAN, SHEET_TELEGRAM_USER, SHEET_SCHEMA, SHEET_SKEMA, SHEET_DATA,
         CMD_START, CMD_KAS, CMD_TAMBAHKAS, CMD_PINDAHKAS, CMD_WARGA, CMD_TAMBAHWARGA, CMD_TAMBAHKK, CMD_TAMBAHANGGOTA, CMD_EDITANGGOTA, CMD_ADMIN, CMD_PENGUMUMAN, CMD_BUATPENGUMUMAN, CMD_SETTING, CMD_SET, CMD_TARIF, CMD_ALOKASI, CMD_TAGIHAN, CMD_BAYAR, CMD_TUNGGAKAN, CMD_REKAP, CMD_DAFTAR, CMD_TUTUPBUKU, CMD_GABUNG, CMD_SAYA, CMD_UNTUKWARGA, CMD_UNTUKADMIN, CMD_SYSTEM, CMD_VERIFIKASI, CMD_TOLAK, CMD_CABUT, CMD_CABUTKK,
-        TAGIHAN_BELUM, TAGIHAN_LUNAS, TAGIHAN_BEBAS, TAGIHAN_BATAL,
+        TAGIHAN_BELUM, TAGIHAN_SEBAGIAN, TAGIHAN_LUNAS, TAGIHAN_BEBAS, TAGIHAN_BATAL,
         JENIS_MASUK, JENIS_KELUAR, JENIS_PINDAH_MASUK, JENIS_PINDAH_KELUAR,
         TELEGRAM_MENUNGGU, TELEGRAM_AKTIF, TELEGRAM_DITOLAK, TELEGRAM_DICABUT,
         ALOKASI_DEFAULT_KODE,

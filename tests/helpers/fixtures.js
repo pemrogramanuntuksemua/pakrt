@@ -26,6 +26,7 @@ function dasar(extra) {
       AlokasiIuran: buatSheet("AlokasiIuran", pakrt.DEFAULT_ALOKASI),
       Tagihan: buatSheet("Tagihan", []),
       Kas: buatSheet("Kas", []),
+      Pembayaran: buatSheet("Pembayaran", []),
       TutupBuku: buatSheet("TutupBuku", []),
       TutupBukuAlokasi: buatSheet("TutupBukuAlokasi", []),
     },

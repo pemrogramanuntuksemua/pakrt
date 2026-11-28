@@ -307,37 +307,64 @@ function handleEditAnggota(chatId, text, senderName, userId) {
   }
 }
 
+function parseArgBayar(token) {
+  const m = /^(\d{4}-\d{2})(?:=(\d+))?$/.exec(str(token).trim());
+  if (!m) return null;
+  return { periode: m[1], nominal: m[2] === undefined ? null : parseInt(m[2], 10) };
+}
+
 function handleBayar(chatId, text, senderName, userId) {
   if (!isAdmin(userId)) {
     tolakAdmin(chatId, userId);
     return;
   }
   try {
-    const bagian = teksPerintah(text, CMD_BAYAR).split("#").map((x) => x.trim()).filter(Boolean);
+    const bagian = teksPerintah(text, CMD_BAYAR)
+      .split(/[\s#]+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
     if (!bagian.length) {
-      sendAdminMessage(chatId, "⚠️ Gunakan: `/bayar <id_kk/no_rumah/nama> <periode...>`");
+      sendAdminMessage(
+        chatId,
+        "⚠️ Gunakan: `/bayar <id_kk/no_rumah/nama>#<YYYY-MM>[=nominal]`\n" +
+        "Contoh: `/bayar KK-001#2026-03=10000` (tanpa nominal = bayar penuh/sisa)"
+      );
       return;
     }
     const kk = cariKeluarga(bagian[0]);
-    const periode = bagian.slice(1);
-    const hasil = catatPembayaran(kk, periode, senderName);
-    const totalKantong = {};
-    hasil.detail.forEach((d) => {
-      d.pembagian.forEach((b) => {
-        totalKantong[b.kode] = (totalKantong[b.kode] || 0) + b.nominal;
-      });
+    const args = [];
+    bagian.slice(1).forEach((token) => {
+      const a = parseArgBayar(token);
+      if (!a) {
+        throw new Error(
+          "Format '" + token + "' tidak dikenal. Gunakan YYYY-MM atau YYYY-MM=nominal."
+        );
+      }
+      args.push(a);
     });
-    const rincianKantong = Object.keys(totalKantong).map(
-      (kode) => "• " + padKanan(kode, 8) + padKiri(fmtRp(totalKantong[kode]), 12)
-    );
+    const jumlah = {};
+    args.forEach((a) => {
+      if (a.nominal !== null) jumlah[a.periode] = a.nominal;
+    });
+    const hasil = catatPembayaran(kk, args.map((a) => a.periode), senderName, { jumlah: jumlah });
+    const totalKantong = {};
+    hasil.kasBaru.forEach((b) => {
+      totalKantong[b.kode] = (totalKantong[b.kode] || 0) + efekKas(b);
+    });
+    const rincianKantong = Object.keys(totalKantong)
+      .filter((kode) => totalKantong[kode] !== 0)
+      .map((kode) => "• " + padKanan(kode, 8) + padKiri(fmtRp(totalKantong[kode]), 12));
     const tarif = hasil.detail.map((d) => fmtRp(d.nominal)).join(" / ");
+    const status = hasil.detail.every((d) => d.status === TAGIHAN_LUNAS)
+      ? "lunas ✅" : "sebagian 🟡";
     sendAdminMessage(
         chatId,
       "✅ *Pembayaran iuran dicatat*\n\n" +
         "👤 " + escMd(kk.nama_kk) + " (" + kk.id_kk + " / " + escMd(kk.no_rumah) + ")\n" +
         "📅 Periode: " + hasil.periode.join(", ") + "\n" +
         "💰 Tagihan: " + tarif + "\n" +
-        "💵 Total: *" + fmtRp(hasil.total) + "*\n\n" +
+        "💵 Dibayar: *" + fmtRp(hasil.total) + "*\n" +
+        "⏳ Sisa: *" + fmtRp(hasil.sisa) + "* · Status: *" + status + "*\n\n" +
         "*Pembagian kantong:*\n" + rincianKantong.join("\n")
     );
   } catch (e) {
@@ -809,6 +836,7 @@ if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         handleAdmin,
         handleAlokasi,
+        parseArgBayar,
         handleBayar,
         handleBuatPengumuman,
         handleCabut,
