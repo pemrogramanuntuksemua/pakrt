@@ -215,9 +215,20 @@ Jalankan bot secara lokal (mock Google Sheets & Telegram):
 node simulate.js "/start"
 node simulate.js "/kas"
 TEXT='/tambahkas masuk#kasrt#100000#Donasi' node simulate.js "$TEXT" 1 777777 Admin
+
+# Rumah tambahan KK014 (rumah 14, induk KK001, tagihan 50% = Rp 25.000)
+node simulate.js "/bayar KK014#2026-01=10000" 12345 777777 admin
+node simulate.js "/bayar KK014#2026-01=25000" 12345 777777 admin
+node simulate.js "/rekap 2026-01" 12345 777777 admin
+node simulate.js "/tagihan KK014" 12345 777777 admin
+
+# Opsi: jalankan initSheets() lebih dulu (membuat tab/kolom yang belum ada)
+node simulate.js "/start" 12345 777777 admin --init
 ```
 
-Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.json` (termasuk `ADMIN_IDS`).
+Argumen: `perintah [chatId] [userId] [nama] [--init]`. Data contoh ada di `simulate-data.json` (termasuk `ADMIN_IDS`, tab `Pembayaran`, dan KK014 sebagai rumah tambahan).
+
+Catatan: setiap proses memuat ulang `simulate-data.json`, jadi perubahan tidak ditulis kembali ke file. Dua contoh `/bayar KK014` di atas masing-masing dijalankan dari data awal—cocok untuk mencoba cicilan atau pelunasan secara terpisah.
 
 ## Alur Tagihan (End-to-End)
 

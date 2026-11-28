@@ -28,26 +28,121 @@ global.CacheService = {
   }),
 };
 
+function ensureCell(data, rowIdx, colIdx) {
+  while (data.length <= rowIdx) data.push([]);
+  const row = data[rowIdx];
+  while (row.length <= colIdx) row.push("");
+}
+
+function buatSheetMock(rows, nama) {
+  const data = (rows || []).map((r) => r.slice());
+  const appended = [];
+  const sheet = {
+    _name: nama,
+    getName: () => sheet._name,
+    setName: (namaBaru) => {
+      sheet._name = namaBaru;
+      return sheet;
+    },
+    getDataRange: () => ({ getValues: () => data.map((r) => r.slice()) }),
+    getLastRow: () => data.length,
+    getLastColumn: () => data.reduce((max, r) => Math.max(max, r.length), 0),
+    appendRow: (row) => {
+      const copy = row.slice();
+      appended.push(copy);
+      data.push(copy);
+    },
+    clear: () => {
+      data.length = 0;
+    },
+    getRange: (row, col, numRows, numCols) => {
+      const nRows = numRows || 1;
+      const nCols = numCols || 1;
+      const range = {
+        getValues: () => {
+          const out = [];
+          for (let r = 0; r < nRows; r++) {
+            const line = [];
+            for (let c = 0; c < nCols; c++) {
+              const src = data[row - 1 + r] || [];
+              line.push(src[col - 1 + c]);
+            }
+            out.push(line);
+          }
+          return out;
+        },
+        setValue: (value) => {
+          ensureCell(data, row - 1, col - 1);
+          data[row - 1][col - 1] = value;
+        },
+        setValues: (values) => {
+          (values || []).forEach((line, r) => {
+            (line || []).forEach((value, c) => {
+              ensureCell(data, row - 1 + r, col - 1 + c);
+              data[row - 1 + r][col - 1 + c] = value;
+            });
+          });
+        },
+        setFontWeight: () => range,
+        setBackground: () => range,
+        setNumberFormat: () => range,
+        setDataValidation: () => range,
+        setHorizontalAlignment: () => range,
+      };
+      return range;
+    },
+    setFrozenRows: () => {},
+    setColumnWidth: () => {},
+    autoResizeColumns: () => {},
+    protect: () => ({
+      setDescription: () => ({}),
+      setWarningOnly: () => ({}),
+    }),
+    _appended: appended,
+    _data: data,
+  };
+  return sheet;
+}
+
 // Load sample data
 const dataPath = path.join(__dirname, "simulate-data.json");
 const sampleData = fs.existsSync(dataPath) ? JSON.parse(fs.readFileSync(dataPath, "utf8")) : {};
+const kunciConfig = ["ADMIN_IDS", "BOT_USERNAME", "GROUP_CHAT_ID"];
 
 const sheets = {};
 Object.keys(sampleData).forEach((name) => {
-  if (!Array.isArray(sampleData[name])) return;
-  const rows = sampleData[name].map((r) => r.slice());
-  const appended = [];
-  sheets[name] = {
-    getDataRange: () => ({ getValues: () => rows }),
-    getLastRow: () => rows.length,
-    appendRow: (row) => { appended.push(row); rows.push(row); },
-    getRange: () => ({ setValue: () => {} }),
-    _appended: appended,
-  };
+  if (kunciConfig.indexOf(name) >= 0 || !Array.isArray(sampleData[name])) return;
+  sheets[name] = buatSheetMock(sampleData[name], name);
 });
 
+const spreadsheet = {
+  getId: () => "simulate-spreadsheet",
+  getSheetByName: (name) => (Object.prototype.hasOwnProperty.call(sheets, name) ? sheets[name] : null),
+  getSheets: () => Object.keys(sheets).map((name) => sheets[name]),
+  insertSheet: (name) => {
+    sheets[name] = buatSheetMock([], name);
+    return sheets[name];
+  },
+  deleteSheet: (sheet) => {
+    const name = typeof sheet === "string" ? sheet : sheet.getName();
+    delete sheets[name];
+  },
+  setSpreadsheetTimeZone: () => {},
+  setLocale: () => {},
+};
+
 global.SpreadsheetApp = {
-  openById: () => ({ getSheetByName: (name) => (Object.prototype.hasOwnProperty.call(sheets, name) ? sheets[name] : null) }),
+  openById: () => spreadsheet,
+  insertSheet: (name) => spreadsheet.insertSheet(name),
+  newDataValidation: () => {
+    const rule = {
+      requireValueInList: () => rule,
+      setAllowInvalid: () => rule,
+      build: () => ({}),
+    };
+    return rule;
+  },
+  Protection: { WarningOnly: "WARNING_ONLY" },
 };
 
 // Capture Telegram sendMessage payloads
@@ -80,11 +175,19 @@ const adminIds = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(",") : (sam
 pakrt.setAdminIds(adminIds);
 if (sampleData.GROUP_CHAT_ID) pakrt.setGroupChatId(sampleData.GROUP_CHAT_ID);
 
-// Parse CLI args
-const text = process.argv[2] || "/start";
-const chatId = Number(process.argv[3] || 12345);
-const userId = Number(process.argv[4] || 777777);
-const name = process.argv[5] || "Bre";
+// Parse CLI args. Flag --init menjalankan initSheets() sebelum perintah Telegram.
+const args = process.argv.slice(2).filter((a) => a !== "--init");
+const jalankanInit = process.argv.indexOf("--init") >= 0;
+const text = args[0] || "/start";
+const chatId = Number(args[1] || 12345);
+const userId = Number(args[2] || 777777);
+const name = args[3] || "Bre";
+
+if (jalankanInit) {
+  global.SPREADSHEET_ID = process.env.SPREADSHEET_ID || "simulate";
+  console.log("=== INIT SHEETS ===");
+  console.log(JSON.stringify(pakrt.initSheets(), null, 2));
+}
 
 const event = {
   postData: {

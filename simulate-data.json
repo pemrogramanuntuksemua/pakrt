@@ -19,7 +19,7 @@
       "Iuran Januari",
       "masuk",
       500000,
-      "",
+      "kasrt",
       "",
       "admin"
     ],
@@ -57,18 +57,40 @@
   ],
   "Keluarga": [
     [
-      "nama_kk",
+      "id_kk",
       "no_rumah",
+      "nama_kk",
       "no_hp",
       "alamat",
-      "catatan"
+      "status",
+      "mulai_iuran",
+      "catatan",
+      "id_kk_induk",
+      "rumah_tambahan"
     ],
     [
       "KK001",
       "12",
+      "Budi",
       "0812",
       "Jl. Mawar",
-      ""
+      "Aktif",
+      "2026-01",
+      "",
+      "",
+      false
+    ],
+    [
+      "KK014",
+      "14",
+      "Budi",
+      "0812",
+      "Jl. Mawar",
+      "Aktif",
+      "2026-01",
+      "Rumah tambahan KK001",
+      "KK001",
+      true
     ]
   ],
   "Pengumuman": [
@@ -89,6 +111,7 @@
     [
       "id_telegram",
       "username",
+      "nama",
       "id_kk",
       "peran",
       "status",
@@ -99,6 +122,7 @@
     [
       "777777",
       "bre",
+      "Bre",
       "KK001",
       "anggota",
       "aktif",
@@ -118,7 +142,7 @@
       "iuran_bulanan",
       "50000",
       "angka",
-      "Tarif iuran default per KK"
+      "Tarif iuran dasar per unit rumah"
     ],
     [
       "maks_telegram_per_kk",
@@ -193,12 +217,21 @@
     ],
     [
       "KK001",
-      "KK001",
+      "Budi",
       "Kepala Keluarga",
       "L",
       "",
       "Aktif",
       ""
+    ],
+    [
+      "KK014",
+      "Budi",
+      "Kepala Keluarga",
+      "L",
+      "",
+      "Aktif",
+      "Anggota rumah tambahan (jiwa tidak dihitung ulang)"
     ]
   ],
   "Tagihan": [
@@ -211,29 +244,101 @@
       "status",
       "tanggal_bayar",
       "dicatat_oleh",
-      "catatan"
+      "catatan",
+      "faktor",
+      "kasrt_saja"
     ],
     [
       "2026-01",
       "KK001",
       "12",
-      "KK001",
+      "Budi",
       50000,
       "belum",
       "",
       "",
-      ""
+      "",
+      1,
+      false
     ],
     [
       "2026-02",
       "KK001",
       "12",
-      "KK001",
+      "Budi",
       50000,
       "belum",
       "",
       "",
-      ""
+      "",
+      1,
+      false
+    ],
+    [
+      "2026-01",
+      "KK014",
+      "14",
+      "Budi",
+      25000,
+      "belum",
+      "",
+      "",
+      "Rumah tambahan KK001",
+      0.5,
+      true
+    ],
+    [
+      "2026-02",
+      "KK014",
+      "14",
+      "Budi",
+      25000,
+      "belum",
+      "",
+      "",
+      "Rumah tambahan KK001",
+      0.5,
+      true
+    ]
+  ],
+  "Pembayaran": [
+    [
+      "id_bayar",
+      "tanggal",
+      "id_kk",
+      "periode",
+      "nominal",
+      "dicatat_oleh",
+      "catatan"
+    ]
+  ],
+  "TutupBuku": [
+    [
+      "periode",
+      "jenis",
+      "tarif",
+      "total_kk",
+      "total_jiwa",
+      "total_tagihan",
+      "total_terbayar",
+      "total_masuk",
+      "total_keluar",
+      "saldo_awal",
+      "saldo_akhir",
+      "ditutup_oleh",
+      "ditutup_pada"
+    ]
+  ],
+  "TutupBukuAlokasi": [
+    [
+      "periode",
+      "kode",
+      "saldo_awal",
+      "masuk",
+      "keluar",
+      "pindah_masuk",
+      "pindah_keluar",
+      "saldo_akhir"
     ]
   ]
 }
