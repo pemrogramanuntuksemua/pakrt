@@ -349,6 +349,8 @@ function getKeluarga() {
       status: str(k.status) || "Aktif",
       mulai_iuran: str(k.mulai_iuran),
       catatan: str(k.catatan),
+      id_kk_induk: str(k.id_kk_induk),
+      rumah_tambahan: toBool(k.rumah_tambahan),
       _row: k._row,
     }))
     .filter((k) => k.id_kk);
@@ -388,14 +390,20 @@ function getAnggotaAktif(idKK) {
 }
 
 function getJumlahJiwaKK(idKK) {
+  const kk = getKeluarga().filter(
+    (k) => str(k.id_kk).toUpperCase() === str(idKK).toUpperCase()
+  )[0];
+  if (kk && kk.rumah_tambahan) return 0;
   return getAnggotaAktif(idKK).length;
 }
 
 function getJumlahJiwa(periode) {
   const ids = {};
-  getKeluargaBillable(periode).forEach((k) => {
-    ids[k.id_kk] = true;
-  });
+  getKeluargaBillable(periode)
+    .filter((k) => !k.rumah_tambahan)
+    .forEach((k) => {
+      ids[k.id_kk] = true;
+    });
   return bacaTabel(SHEET_ANGGOTA).rows.filter((a) => {
     return (
       str(a.status).toLowerCase() === "aktif" &&
@@ -409,10 +417,15 @@ function getJumlahJiwaUntukIds(ids) {
   (ids || []).forEach((id) => {
     map[str(id)] = true;
   });
+  // Rumah tambahan adalah unit tagihan, bukan unit jiwa baru.
+  const utama = {};
+  getKeluarga().forEach((k) => {
+    if (!k.rumah_tambahan && map[k.id_kk]) utama[k.id_kk] = true;
+  });
   const anggota = bacaTabel(SHEET_ANGGOTA).rows;
   const kepala = {};
   anggota.forEach((a) => {
-    if (map[str(a.id_kk)] && str(a.status).toLowerCase() === "aktif") {
+    if (utama[str(a.id_kk)] && str(a.status).toLowerCase() === "aktif") {
       kepala[str(a.id_kk)] = true;
     }
   });
@@ -438,12 +451,12 @@ function cariKeluarga(identifier) {
   const nama = semua.filter((k) => k.nama_kk && k.nama_kk.toUpperCase() === up);
   if (nama.length === 1) return nama[0];
   if (found.length > 1 || nama.length > 1) {
-    throw new Error("'" + key + "' cocok dengan lebih dari satu KK. Gunakan id_kk.");
+    throw new Error("'" + key + "' cocok dengan lebih dari satu KK. Gunakan id_kk atau no_rumah.");
   }
   const partial = semua.filter((k) => k.nama_kk && k.nama_kk.toUpperCase().indexOf(up) >= 0);
   if (partial.length === 1) return partial[0];
   if (partial.length > 1) {
-    throw new Error("'" + key + "' cocok dengan lebih dari satu KK. Gunakan id_kk.");
+    throw new Error("'" + key + "' cocok dengan lebih dari satu KK. Gunakan id_kk atau no_rumah.");
   }
   throw new Error("KK '" + key + "' tidak ditemukan.");
 }
@@ -454,8 +467,19 @@ function tambahKeluarga(data, oleh) {
   const rumah = str(d.no_rumah);
   if (!nama) throw new Error("Nama kepala keluarga wajib diisi.");
   if (!rumah) throw new Error("Nomor rumah wajib diisi.");
+  const induk = str(d.id_kk_induk);
+  const tambahan = toBool(d.rumah_tambahan);
+  let indukKK = null;
+  if (tambahan) {
+    if (!induk) throw new Error("id_kk_induk wajib diisi untuk rumah tambahan.");
+    indukKK = cariKeluarga(induk);
+    if (indukKK.rumah_tambahan) {
+      throw new Error("Induk rumah tambahan harus berupa rumah utama.");
+    }
+  }
   const id = generateIdKK(rumah);
-  const mulai = str(d.mulai_iuran) || str(getSetting("iuran_mulai_default")) || periodeSekarang();
+  let mulai = str(d.mulai_iuran) || str(getSetting("iuran_mulai_default")) || periodeSekarang();
+  if (tambahan && indukKK && indukKK.mulai_iuran) mulai = indukKK.mulai_iuran;
   tambahBaris(SHEET_KELUARGA, {
     id_kk: id,
     no_rumah: rumah,
@@ -465,6 +489,8 @@ function tambahKeluarga(data, oleh) {
     status: str(d.status) || "Aktif",
     mulai_iuran: mulai,
     catatan: str(d.catatan),
+    id_kk_induk: indukKK ? indukKK.id_kk : "",
+    rumah_tambahan: tambahan,
   });
   tambahBaris(SHEET_ANGGOTA, {
     id_kk: id,
@@ -922,8 +948,9 @@ function setTarif(periode, nominal, keterangan) {
 function sesuaikanTarifPeriode(periode, nominal) {
   let jumlah = 0;
   getTagihanPeriode(periode).forEach((t) => {
-    if (t.status === TAGIHAN_BELUM && t.nominal !== nominal) {
-      setSel(SHEET_TAGIHAN, t._row, "nominal", nominal);
+    const baru = Math.round(nominal * (t.faktor || 1));
+    if (t.status === TAGIHAN_BELUM && t.nominal !== baru) {
+      setSel(SHEET_TAGIHAN, t._row, "nominal", baru);
       jumlah++;
     }
   });
@@ -1002,12 +1029,15 @@ function getTagihan() {
       const dariLedger = dibayar[kunci] || 0;
       // Tagihan lunas sebelum fitur cicilan tidak punya baris di Pembayaran.
       const terbayar = dariLedger > 0 ? dariLedger : (status === TAGIHAN_LUNAS ? nominal : 0);
+      const faktor = parseAngka(t.faktor) || 1;
       return {
         periode: str(t.periode),
         id_kk: str(t.id_kk),
         no_rumah: str(t.no_rumah),
         nama_kk: str(t.nama_kk),
         nominal: nominal,
+        faktor: faktor,
+        kasrt_saja: toBool(t.kasrt_saja) || faktor < 1,
         status: status,
         terbayar: terbayar,
         sisa: Math.max(0, nominal - terbayar),
@@ -1055,16 +1085,19 @@ function pastikanTagihan(periode) {
   });
   const baru = getKeluargaBillable(p.periode).filter((k) => !ada[k.id_kk]);
   baru.forEach((k) => {
+    const faktor = k.rumah_tambahan ? 0.5 : 1;
     tambahBaris(SHEET_TAGIHAN, {
       periode: p.periode,
       id_kk: k.id_kk,
       no_rumah: k.no_rumah,
       nama_kk: k.nama_kk,
-      nominal: tarif,
+      nominal: Math.round(tarif * faktor),
       status: TAGIHAN_BELUM,
       tanggal_bayar: "",
       dicatat_oleh: "",
       catatan: "",
+      faktor: faktor,
+      kasrt_saja: k.rumah_tambahan,
     });
   });
   return baru.length;
@@ -1225,12 +1258,13 @@ function catatPembayaran(keluarga, periodeList, oleh, opsi) {
       }
       const sisaSesudah = Math.max(0, t.sisa - diminta);
       const statusBaru = sisaSesudah > 0 ? TAGIHAN_SEBAGIAN : TAGIHAN_LUNAS;
+      const transferIni = t.kasrt_saja ? 0 : totalTransfer;
       if (statusBaru === TAGIHAN_LUNAS) {
         saldoKasrtProyeksi += diminta;
-        if (saldoKasrtProyeksi < totalTransfer) {
+        if (transferIni > 0 && saldoKasrtProyeksi < transferIni) {
           throw new Error(
             "Saldo " + ALOKASI_DEFAULT_KODE + " tidak cukup untuk alokasi tetap (" +
-            fmtRp(totalTransfer) + ")."
+            fmtRp(transferIni) + ")."
           );
         }
       }
@@ -1241,6 +1275,7 @@ function catatPembayaran(keluarga, periodeList, oleh, opsi) {
         sisaSebelum: t.sisa,
         sisaSesudah: sisaSesudah,
         statusBaru: statusBaru,
+        kasrtSaja: t.kasrt_saja,
       };
     });
     const pembayaranBaru = [];
@@ -1284,7 +1319,7 @@ function catatPembayaran(keluarga, periodeList, oleh, opsi) {
         });
         kasBaru.push({ periode: x.periode, kode: ALOKASI_DEFAULT_KODE, nominal: x.nominal, jenis: JENIS_MASUK });
       }
-      if (x.statusBaru === TAGIHAN_LUNAS && totalTransfer > 0) {
+      if (x.statusBaru === TAGIHAN_LUNAS && !x.kasrtSaja && totalTransfer > 0) {
         if (!kasRefJenisAda(ref, ALOKASI_DEFAULT_KODE, JENIS_PINDAH_KELUAR)) {
           tambahBaris(SHEET_KAS, {
             tanggal: sekarang,
@@ -2050,9 +2085,9 @@ function formatRekapBulanan(r) {
   const terkunci = isPeriodeTertutup(e.periode);
   return (
     "📊 *REKAP IURAN — " + labelPeriode(e.periode).toUpperCase() + "*" + (terkunci ? " 🔒" : "") + "\n\n" +
-    "🎯 Target: *" + fmtRp(e.totalTagihan) + "*  (" + e.totalKK + " KK × " + fmtRp(e.tarif) + ")\n" +
-    "✅ Terbayar: *" + fmtRp(e.terbayar) + "*  (" + e.lunasKK + " KK · " + persen + "%)\n" +
-    "⏳ Tunggakan: *" + fmtRp(e.tunggakan) + "*  (" + e.belumKK + " KK)\n" +
+    "🎯 Target: *" + fmtRp(e.totalTagihan) + "*  (" + e.totalKK + " unit tagihan · tarif dasar " + fmtRp(e.tarif) + ")\n" +
+    "✅ Terbayar: *" + fmtRp(e.terbayar) + "*  (" + e.lunasKK + " unit · " + persen + "%)\n" +
+    "⏳ Tunggakan: *" + fmtRp(e.tunggakan) + "*  (" + e.belumKK + " unit)\n" +
     "👥 Jiwa terdampak: " + e.totalJiwa + " orang\n" +
     (e.dibebaskan ? "🕊️ Dibebaskan: " + e.dibebaskan + " KK\n" : "") +
     "\nProgres: " + progressBar(persen) + " " + persen + "%\n\n" +
@@ -2605,6 +2640,18 @@ function seedAlokasiDefault() {
   return DEFAULT_ALOKASI.length;
 }
 
+function kolomYangKurang(sheet, nama) {
+  const skema = SHEET_SCHEMA[nama] || [];
+  if (!sheet || !skema.length) return [];
+  const jumlah = typeof sheet.getLastColumn === "function" ? sheet.getLastColumn() : 0;
+  const header = jumlah > 0
+    ? sheet.getRange(1, 1, 1, jumlah).getValues()[0].map((v) => str(v).toLowerCase())
+    : [];
+  return skema
+    .filter((kol) => header.indexOf(kol) < 0)
+    .map((kol, i) => ({ kolom: kol, posisi: header.length + i + 1 }));
+}
+
 function setupSheets(opsi) {
   const o = opsi || {};
   const mode = str(o.mode) || "safe";
@@ -2627,9 +2674,14 @@ function setupSheets(opsi) {
   });
   const akanHapus = hapus.filter((n) => ada[n]);
   const akanBuat = [];
+  const kolomKurang = {};
   if (mode === "safe") {
     Object.keys(SHEET_SCHEMA).forEach((n) => {
       if (!ada[n]) akanBuat.push(n);
+      else {
+        const kurang = kolomYangKurang(ada[n], n);
+        if (kurang.length) kolomKurang[n] = kurang;
+      }
     });
   } else {
     hapus.forEach((n) => {
@@ -2641,6 +2693,7 @@ function setupSheets(opsi) {
     dryRun: dryRun,
     akanHapus: akanHapus,
     akanBuat: akanBuat,
+    kolomKurang: kolomKurang,
     backup: mode !== "safe" && o.backup !== false,
   };
   if (dryRun) {
@@ -2669,6 +2722,11 @@ function setupSheets(opsi) {
     terapkanSchema(sheet, n);
   });
   if (temp) aman(() => ss.deleteSheet(temp));
+  Object.keys(kolomKurang).forEach((n) => {
+    kolomKurang[n].forEach((item) => {
+      aman(() => ada[n].getRange(1, item.posisi).setValue(item.kolom));
+    });
+  });
   const seed = {
     setting: seedSettings(),
     tarif: seedTarifAwal(),
@@ -2685,6 +2743,7 @@ function setupSheets(opsi) {
     mode: mode,
     dihapus: akanHapus,
     dibuat: akanBuat,
+    kolomDitambah: kolomKurang,
     seed: seed,
     backfill: backfill,
     backup: backup,

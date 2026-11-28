@@ -25,11 +25,11 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 | Tab | Kolom |
 |---|---|
 | `Setting` | `kunci, nilai, tipe, keterangan` |
-| `Keluarga` | `id_kk, no_rumah, nama_kk, no_hp, alamat, status, mulai_iuran, catatan` |
+| `Keluarga` | `id_kk, no_rumah, nama_kk, no_hp, alamat, status, mulai_iuran, catatan, id_kk_induk, rumah_tambahan` |
 | `Anggota` | `id_kk, nama, hubungan, jenis_kelamin, tanggal_lahir, status, catatan` |
 | `TarifIuran` | `berlaku_mulai, nominal, keterangan` |
 | `AlokasiIuran` | `kode, nama, nominal, sisa, keterangan` |
-| `Tagihan` | `periode, id_kk, no_rumah, nama_kk, nominal, status, tanggal_bayar, dicatat_oleh, catatan` |
+| `Tagihan` | `periode, id_kk, no_rumah, nama_kk, nominal, status, tanggal_bayar, dicatat_oleh, catatan, faktor, kasrt_saja` |
 | `Pembayaran` | `id_bayar, tanggal, id_kk, periode, nominal, dicatat_oleh, catatan` |
 | `Kas` | `tanggal, keterangan, jenis, nominal, alokasi, ref, dicatat_oleh` |
 | `TutupBuku` | `periode, jenis, tarif, total_kk, total_jiwa, total_tagihan, total_terbayar, total_masuk, total_keluar, saldo_awal, saldo_akhir, ditutup_oleh, ditutup_pada` |
@@ -40,6 +40,7 @@ Semua tab dibuat otomatis oleh `initSheets()` / `setupSheets()`.
 ### Aturan data
 
 - **KK vs anggota.** `Keluarga` adalah unit penagihan/admin; `Anggota` dihitung sebagai jumlah jiwa. Satu rumah boleh punya lebih dari satu KK. `id_kk` adalah kunci utama; `no_rumah` hanya atribut.
+- **Rumah tambahan.** Satu keluarga boleh punya beberapa rumah. Rumah pertama memakai `rumah_tambahan = FALSE` dan `id_kk_induk` kosong. Rumah berikutnya memakai `rumah_tambahan = TRUE` dan `id_kk_induk` menunjuk KK rumah pertama. Setiap rumah tambahan ditagih 50% tarif (`faktor = 0,5`) dan pembayarannya **tidak ditransfer** ke kantong tetap—seluruhnya tetap di `kasrt` (`kasrt_saja = TRUE`). Jiwa tetap dihitung sekali, yaitu dari KK utama; rumah tambahan hanya menambah unit tagihan.
 - **Kepala keluarga** otomatis dibuat sebagai baris `Anggota` dengan `hubungan = Kepala Keluarga` saat `/tambahkk`. `jenis_kelamin` dan `tanggal_lahir` belum diisi; lengkapi lewat `/editanggota`.
 - **Tagihan per KK**, bukan per orang. Riwayat tarif disimpan di `TarifIuran.berlaku_mulai`; tarif berlaku = baris terbaru dengan periode ≤ periode tagihan.
 - **`Tagihan` adalah sumber kebenaran.** Baris historis tidak pernah dihitung ulang atau dihapus. Perubahan tarif hanya menyentuh tagihan berstatus `belum`; yang sudah `lunas` tidak diubah.
@@ -71,7 +72,7 @@ Perintah ini **hanya dijalankan dari editor Apps Script**, tidak lewat menu, `on
 
 | Fungsi | Kegunaan |
 |---|---|
-| `setupSheets({ mode: "safe" })` / `initSheets()` | Membuat tab yang belum ada, mengisi setting/tarif/alokasi awal. Data lama aman. |
+| `setupSheets({ mode: "safe" })` / `initSheets()` | Membuat tab yang belum ada, menambahkan kolom baru pada tab lama, mengisi setting/tarif/alokasi awal. Data lama aman. |
 | `setupSheets({ mode: "reset", dryRun: true })` / `resetSheetSkemaDryRun()` | Melihat rencana reset tanpa mengubah apa pun. |
 | `setupSheets({ mode: "reset", backup: true })` / `resetSheetSkema()` | Backup seluruh file ke Drive, lalu hapus & buat ulang **sheet skema** saja. |
 | `setupSheets({ mode: "fresh", backup: true })` / `resetSemuaSheet()` | Sama seperti reset, tetapi juga menghapus `Kas`, `Pembayaran`, dan `Pengumuman`. |
@@ -81,7 +82,7 @@ Perintah ini **hanya dijalankan dari editor Apps Script**, tidak lewat menu, `on
 - Data yang dipertahankan saat reset: `Kas`, `Pembayaran`, `Pengumuman`, dan `Warga`/`Warga_lama`.
 - `setupSheets` juga menerima `{ spreadsheet }` atau `{ spreadsheetId }`; `{ backfill: true }` langsung membuat tagihan dari `backfill_mulai` sampai bulan berjalan.
 - `backupSekarang()` membuat backup manual.
-- Spreadsheet yang sudah ada perlu menjalankan `initSheets()` sekali setelah deploy agar tab `Pembayaran` terbuat.
+- Spreadsheet yang sudah ada perlu menjalankan `initSheets()` sekali setelah deploy agar tab `Pembayaran` terbuat dan kolom `id_kk_induk`, `rumah_tambahan`, `faktor`, serta `kasrt_saja` ditambahkan ke tab yang lama.
 
 ## Migrasi dari data lama
 
@@ -128,7 +129,8 @@ Jalankan berurutan dari editor:
 | `/setting` | Daftar pengaturan | `/setting` |
 | `/set kunci#nilai#[periode]` | Ubah pengaturan; `iuran_bulanan` menyesuaikan tarif | `/set iuran_bulanan#65000#2026-05` |
 | `/tarif` | Riwayat & tarif berlaku | `/tarif` |
-| `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan` | Tambah KK + kepala keluarga | `/tambahkk Budi#0812#A1#Jl. Mawar#` |
+| `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan` | Tambah KK + kepala keluarga | `/tambahkk Budi#0812#55#Jl. Mawar#` |
+| `/tambahkk Nama#HP#Rumah#Alamat#Catatan#id_kk_induk#rumah_tambahan` | Tambah rumah tambahan satu keluarga (tagihan 50%, kasrt saja) | `/tambahkk Budi#0812#57#Jl. Mawar##KK055#rumah_tambahan` |
 | `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD#Catatan` | Tambah anggota | `/tambahanggota KK-001#Rina#Istri#P#2010-05-01` |
 | `/editanggota id_kk#Nama#kolom=nilai` | Ubah data anggota (nama, hubungan, jk, lahir, status, catatan) | `/editanggota KK-001#Budi#jk=L#lahir=1990-01-01` |
 | `/tagihan <id_kk/no_rumah/nama>` | Rincian tagihan & tunggakan KK mana pun | `/tagihan KK-001` |
@@ -219,7 +221,7 @@ Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.
 
 ## Alur Tagihan (End-to-End)
 
-1. Daftar KK: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`
+1. Daftar KK: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan` (rumah tambahan: tambahkan `#id_kk_induk#rumah_tambahan`)
 2. (Opsional) Tambah anggota: `/tambahanggota id_kk#Nama#Hubungan#L/P#YYYY-MM-DD`
 3. Set tarif: `/set iuran_bulanan <nominal> [periode]` (contoh `/set iuran_bulanan#50000#2026-05`)
 4. Buat tagihan:
@@ -229,7 +231,31 @@ Argumen: `perintah [chatId] [userId] [nama]`. Data contoh ada di `simulate-data.
 6. Bayar iuran: `/bayar id_kk#periode1[=nominal]#periode2[=nominal]`
 7. Tutup buku: `/tutupbuku YYYY-MM` (mengunci periode)
 
-Catatan: KK harus terdaftar dulu. Tagihan dibuat per KK berdasarkan tarif aktif.
+Catatan: KK harus terdaftar dulu. Tagihan dibuat per KK (per unit rumah) berdasarkan tarif aktif dan `faktor` rumahnya.
+
+### Rumah tambahan
+
+Satu keluarga bisa memiliki lebih dari satu rumah. Rumah pertama memakai tarif penuh; semua rumah tambahan memakai faktor `0,5`.
+
+```
+/tambahkk Budi#0812#55#Jl. Mawar#
+/tambahkk Budi#0812#57#Jl. Mawar##KK055#rumah_tambahan
+/tambahkk Budi#0812#59#Jl. Mawar##KK055#rumah_tambahan
+```
+
+Dengan tarif 50.000:
+
+| Rumah | id_kk | Tagihan/bulan | Saat lunas |
+|---|---|---:|---|
+| `55` (utama) | `KK055` | 50.000 | Transfer 45.000 ke `dkmt` + `kamsih` |
+| `57` (tambahan) | `KK057` | 25.000 | Tetap 25.000 di `kasrt` |
+| `59` (tambahan) | `KK059` | 25.000 | Tetap 25.000 di `kasrt` |
+
+- Total tagihan keluarga: 100.000, tetapi **jiwa tetap 1**.
+- Rekap menghitung 3 unit tagihan, bukan 3 jiwa.
+- `id_kk_induk` pada semua rumah tambahan menunjuk ke `KK055`.
+- `faktor` dan `kasrt_saja` disalin ke baris `Tagihan` saat tagihan dibuat, sehingga mengubah tarif tidak merusak tagihan rumah tambahan.
+- `cariKeluarga('57')` tetap bisa dipakai; cari berdasarkan nama akan error jika nama kepala keluarga sama—gunakan `id_kk` atau `no_rumah`.
 
 ### Pembayaran parsial
 

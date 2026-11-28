@@ -172,16 +172,39 @@ function handleTambahKK(chatId, text, senderName, userId) {
     const noHp = parts[1] || "";
     const noRumah = parts[2] || "";
     const alamat = parts[3] || "";
-    const catatan = parts.slice(4).join("#").trim();
+    const terakhir = parts[parts.length - 1] || "";
+    const rumahTambahan = /^(rumah_tambahan|rumah tambahan|tambahan|setengah|1|true|ya|yes)$/i.test(terakhir);
+    let idInduk = "";
+    let bagianCatatan = parts.slice(4);
+    if (rumahTambahan) {
+      if (parts.length < 7) {
+        throw new Error(
+          "Rumah tambahan butuh id_kk_induk. Contoh: " +
+          "`/tambahkk Nama#No HP#No Rumah#Alamat#Catatan#KK001#rumah_tambahan`"
+        );
+      }
+      idInduk = parts[parts.length - 2];
+      bagianCatatan = parts.slice(4, parts.length - 2);
+    }
+    const catatan = bagianCatatan.join("#").trim();
     if (!nama || !noRumah) {
       sendAdminMessage(
         chatId,
-        "⚠️ *Format Salah!*\nGunakan: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`"
+        "⚠️ *Format Salah!*\nGunakan: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan`\n" +
+        "Rumah tambahan: `/tambahkk Nama#No HP#No Rumah#Alamat#Catatan#id_kk_induk#rumah_tambahan`"
       );
       return;
     }
     const kk = tambahKeluarga(
-      { nama_kk: nama, no_hp: noHp, no_rumah: noRumah, alamat: alamat, catatan: catatan },
+      {
+        nama_kk: nama,
+        no_hp: noHp,
+        no_rumah: noRumah,
+        alamat: alamat,
+        catatan: catatan,
+        id_kk_induk: idInduk,
+        rumah_tambahan: rumahTambahan,
+      },
       senderName
     );
     sendAdminMessage(
@@ -190,6 +213,9 @@ function handleTambahKK(chatId, text, senderName, userId) {
         "🆔 ID: *" + kk.id_kk + "*\n" +
         "👤 Kepala Keluarga: *" + escMd(kk.nama_kk) + "*\n" +
         "🏠 No Rumah: *" + escMd(kk.no_rumah) + "*\n" +
+        (kk.rumah_tambahan
+          ? "🏠 Rumah tambahan dari *" + escMd(kk.id_kk_induk) + "* · tagihan 50%\n"
+          : "") +
         "📞 No HP: " + escMd(kk.no_hp || "-") + "\n" +
         "📍 " + escMd(kk.alamat || "-") + "\n" +
         "📅 Mulai iuran: " + kk.mulai_iuran + "\n\n" +

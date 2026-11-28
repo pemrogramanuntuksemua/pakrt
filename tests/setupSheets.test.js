@@ -130,6 +130,33 @@ describe("setupSheets", () => {
     expect(hasil.akanBuat.sort()).toEqual(SKEMA_SAFE.slice().sort());
   });
 
+  test("mode safe menambahkan kolom baru ke sheet lama tanpa menghapus data", () => {
+    const keluarga = createMockSheet(
+      [
+        ["id_kk", "no_rumah", "nama_kk", "no_hp", "alamat", "status", "mulai_iuran", "catatan"],
+        ["KK055", "55", "Budi", "0812", "Jl. Mawar", "Aktif", "2024-01", ""],
+      ],
+      { name: "Keluarga" }
+    );
+    const tagihan = createMockSheet(
+      [
+        ["periode", "id_kk", "no_rumah", "nama_kk", "nominal", "status", "tanggal_bayar", "dicatat_oleh", "catatan"],
+        ["2024-01", "KK055", "55", "Budi", 50000, "belum", "", "", ""],
+      ],
+      { name: "Tagihan" }
+    );
+    const ss = setSpreadsheet({ Keluarga: keluarga, Tagihan: tagihan });
+
+    const hasil = pakrt.setupSheets({ spreadsheet: ss, mode: "safe" });
+
+    expect(keluarga._data[0]).toEqual(pakrt.SHEET_SCHEMA.Keluarga);
+    expect(tagihan._data[0]).toEqual(pakrt.SHEET_SCHEMA.Tagihan);
+    expect(keluarga._data[1][0]).toBe("KK055");
+    expect(tagihan._data[1][4]).toBe(50000);
+    expect(hasil.kolomDitambah.Keluarga.map((x) => x.kolom)).toEqual(["id_kk_induk", "rumah_tambahan"]);
+    expect(hasil.kolomDitambah.Tagihan.map((x) => x.kolom)).toEqual(["faktor", "kasrt_saja"]);
+  });
+
   test("mode tidak dikenal ditolak", () => {
     const ss = buatSpreadsheet();
     expect(() => pakrt.setupSheets({ spreadsheet: ss, mode: "ngawur" })).toThrow(/safe\/reset\/fresh/);

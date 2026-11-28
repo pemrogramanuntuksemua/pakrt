@@ -24,11 +24,11 @@ const SHEET_TELEGRAM_USER = "TelegramUser";
 
 const SHEET_SCHEMA = {
   Setting: ["kunci", "nilai", "tipe", "keterangan"],
-  Keluarga: ["id_kk", "no_rumah", "nama_kk", "no_hp", "alamat", "status", "mulai_iuran", "catatan"],
+  Keluarga: ["id_kk", "no_rumah", "nama_kk", "no_hp", "alamat", "status", "mulai_iuran", "catatan", "id_kk_induk", "rumah_tambahan"],
   Anggota: ["id_kk", "nama", "hubungan", "jenis_kelamin", "tanggal_lahir", "status", "catatan"],
   TarifIuran: ["berlaku_mulai", "nominal", "keterangan"],
   AlokasiIuran: ["kode", "nama", "nominal", "sisa", "keterangan"],
-  Tagihan: ["periode", "id_kk", "no_rumah", "nama_kk", "nominal", "status", "tanggal_bayar", "dicatat_oleh", "catatan"],
+  Tagihan: ["periode", "id_kk", "no_rumah", "nama_kk", "nominal", "status", "tanggal_bayar", "dicatat_oleh", "catatan", "faktor", "kasrt_saja"],
   Kas: ["tanggal", "keterangan", "jenis", "nominal", "alokasi", "ref", "dicatat_oleh"],
   Pembayaran: ["id_bayar", "tanggal", "id_kk", "periode", "nominal", "dicatat_oleh", "catatan"],
   TutupBuku: ["periode", "jenis", "tarif", "total_kk", "total_jiwa", "total_tagihan", "total_terbayar", "total_masuk", "total_keluar", "saldo_awal", "saldo_akhir", "ditutup_oleh", "ditutup_pada"],
